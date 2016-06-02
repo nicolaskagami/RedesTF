@@ -1,4 +1,19 @@
-# Copyright (C) 2011 Nippon Telegraph and Telephone Corporation.
+#  This is part of our final project for the Computer Networks Graduate Course at Georgia Tech
+#    You can take the official course online too! Just google CS 6250 online at Georgia Tech.
+#
+#  Contributors:
+#   
+#    Akshar Rawal (arawal@gatech.edu)
+#    Flavio Castro (castro.flaviojr@gmail.com)
+#    Logan Blyth (lblyth3@gatech.edu)
+#    Matthew Hicks (mhicks34@gatech.edu)
+#    Uy Nguyen (unguyen3@gatech.edu)
+#
+#  To run:
+#    
+#    ryu--manager --observe-links shortestpath.py   
+#
+#Copyright (C) 2014, Georgia Institute of Technology.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,31 +27,33 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
- 
+
+"""
+An OpenFlow 1.0 shortest path forwarding implementation.
+"""
+
+import logging
+import struct
+
 from ryu.base import app_manager
 from ryu.controller import mac_to_port
 from ryu.controller import ofp_event
-from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
+from ryu.controller.handler import MAIN_DISPATCHER, CONFIG_DISPATCHER
 from ryu.controller.handler import set_ev_cls
-from ryu.ofproto import ofproto_v1_3
+from ryu.ofproto import ofproto_v1_0
 from ryu.lib.mac import haddr_to_bin
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
-from ryu.lib.packet import ether_types
-from ryu.lib.packet import arp
-from ryu.lib.packet import ipv4
-from ryu.lib.packet import icmp
-from ryu.lib import mac
- 
+
 from ryu.topology.api import get_switch, get_link
 from ryu.app.wsgi import ControllerBase
-from ryu.topology import event, switches
+from ryu.topology import event, switches 
 import networkx as nx
-import matplotlib.pyplot as plt
- 
+
 class ProjectController(app_manager.RyuApp):
-    OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
- 
+	
+    OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION]
+
     def __init__(self, *args, **kwargs):
         super(ProjectController, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
@@ -47,67 +64,33 @@ class ProjectController(app_manager.RyuApp):
         self.no_of_nodes = 0
         self.no_of_links = 0
         self.i=0
-  
+
+
     # Handy function that lists all attributes in the given object
     def ls(self,obj):
         print("\n".join([x for x in dir(obj) if x[0] != "_"]))
- 
+	
     def add_flow(self, datapath, in_port, dst, actions):
-	print "Adding flow"
         ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser      
-        match = datapath.ofproto_parser.OFPMatch(in_port=in_port, eth_dst=dst)
-        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)] 
+
+        match = datapath.ofproto_parser.OFPMatch(
+            in_port=in_port, dl_dst=haddr_to_bin(dst))
+
         mod = datapath.ofproto_parser.OFPFlowMod(
             datapath=datapath, match=match, cookie=0,
             command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0,
-            priority=ofproto.OFP_DEFAULT_PRIORITY, instructions=inst)
+            priority=ofproto.OFP_DEFAULT_PRIORITY,
+            flags=ofproto.OFPFF_SEND_FLOW_REM, actions=actions)
         datapath.send_msg(mod)
- 
-    def _find_protocol(self, pkt, name):
-        for p in pkt.protocols:
-            if hasattr(p, 'protocol_name'):
-                if p.protocol_name == name:
-                    return p
 
-    def _get_protocols(self, pkt):
-        protocols = {}
-        for p in pkt:
-            if hasattr(p, 'protocol_name'):
-                protocols[p.protocol_name] = p
-            else:
-                protocols['payload'] = p
-        return protocols
-
-    @set_ev_cls(ofp_event.EventOFPSwitchFeatures , CONFIG_DISPATCHER)
-    def switch_features_handler(self , ev):
-         #print "switch_features_handler is called"
-         datapath = ev.msg.datapath
-         ofproto = datapath.ofproto
-         parser = datapath.ofproto_parser
-         match = parser.OFPMatch()
-         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER)]
-         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS , actions)]
-         mod = datapath.ofproto_parser.OFPFlowMod(datapath=datapath, match=match, cookie=0,command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0, priority=0, instructions=inst)
-         datapath.send_msg(mod)
- 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
         msg = ev.msg
         datapath = msg.datapath
         ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-        in_port = msg.match['in_port']
- 
+
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocol(ethernet.ethernet)
- 
-        p_arp = self._find_protocol(pkt, "arp")
-        eth = pkt.get_protocols(ethernet.ethernet)[0]
-
-        if eth.ethertype == ether_types.ETH_TYPE_LLDP:
-            # ignore lldp packet
-            return
 
         dst = eth.dst
         src = eth.src
@@ -117,60 +100,74 @@ class ProjectController(app_manager.RyuApp):
         #print self.net.nodes()
         #print "edges"
         #print self.net.edges()
-       
+        #self.logger.info("packet in %s %s %s %s", dpid, src, dst, msg.in_port)
         if src not in self.net:
-	    print src
             self.net.add_node(src)
-            self.net.add_edge(dpid,src,{'port':in_port})
+            self.net.add_edge(dpid,src,{'port':msg.in_port})
             self.net.add_edge(src,dpid)
         if dst in self.net:
-	    print "2"
-            print (src in self.net)
+            #print (src in self.net)
             #print nx.shortest_path(self.net,1,4)
             #print nx.shortest_path(self.net,4,1)
             #print nx.shortest_path(self.net,src,4)
- 
-            path=nx.shortest_path(self.net,src,dst)  
+
+            path=nx.shortest_path(self.net,src,dst)   
             next=path[path.index(dpid)+1]
             out_port=self.net[dpid][next]['port']
         else:
-	    #print "3"
             out_port = ofproto.OFPP_FLOOD
- 
+
         actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+
         # install a flow to avoid packet_in next time
         if out_port != ofproto.OFPP_FLOOD:
-		self.add_flow(datapath, in_port, dst, actions)
- 
-        out = datapath.ofproto_parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,actions=actions, data=msg.data)
-	if p_arp:
-		print "ARP!"
-                self.logger.info("packet in %s %s %s %s", dpid, src, dst, out.in_port)
-		print out
+            self.add_flow(datapath, msg.in_port, dst, actions)
+
+        out = datapath.ofproto_parser.OFPPacketOut(
+            datapath=datapath, buffer_id=msg.buffer_id, in_port=msg.in_port,
+            actions=actions)
         datapath.send_msg(out)
-   
+    
     @set_ev_cls(event.EventSwitchEnter)
     def get_topology_data(self, ev):
-        switch_list = get_switch(self.topology_api_app, None)  
+        switch_list = get_switch(self.topology_api_app, None)   
         switches=[switch.dp.id for switch in switch_list]
         self.net.add_nodes_from(switches)
-        
+         
         #print "**********List of switches"
-        for switch in switch_list:
-          #self.ls(switch)
-          #print switch
-          self.nodes[self.no_of_nodes] = switch
-          self.no_of_nodes += 1
-       
+        #for switch in switch_list:
+        #self.ls(switch)
+        #print switch
+        #self.nodes[self.no_of_nodes] = switch
+        #self.no_of_nodes += 1
+	
         links_list = get_link(self.topology_api_app, None)
-        print links_list
+        #print links_list
         links=[(link.src.dpid,link.dst.dpid,{'port':link.src.port_no}) for link in links_list]
-        print links
+        #print links
         self.net.add_edges_from(links)
         links=[(link.dst.dpid,link.src.dpid,{'port':link.dst.port_no}) for link in links_list]
-        print links
+        #print links
         self.net.add_edges_from(links)
         print "**********List of links"
         print self.net.edges()
-	#nx.draw(self.net);
-	#plt.show();
+        #for link in links_list:
+	    #print link.dst
+            #print link.src
+            #print "Novo link"
+	    #self.no_of_links += 1
+      
+        
+	#print "@@@@@@@@@@@@@@@@@Printing both arrays@@@@@@@@@@@@@@@"
+    #for node in self.nodes:	
+	#    print self.nodes[node]
+	#for link in self.links:
+	#    print self.links[link]
+	#print self.no_of_nodes
+	#print self.no_of_links
+
+    #@set_ev_cls(event.EventLinkAdd)
+    #def get_links(self, ev):
+	#print "################Something##############"
+	#print ev.link.src, ev.link.dst
+

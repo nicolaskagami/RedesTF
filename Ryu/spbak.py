@@ -23,9 +23,6 @@ from ryu.lib.mac import haddr_to_bin
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 from ryu.lib.packet import ether_types
-from ryu.lib.packet import arp
-from ryu.lib.packet import ipv4
-from ryu.lib.packet import icmp
 from ryu.lib import mac
  
 from ryu.topology.api import get_switch, get_link
@@ -64,21 +61,6 @@ class ProjectController(app_manager.RyuApp):
             priority=ofproto.OFP_DEFAULT_PRIORITY, instructions=inst)
         datapath.send_msg(mod)
  
-    def _find_protocol(self, pkt, name):
-        for p in pkt.protocols:
-            if hasattr(p, 'protocol_name'):
-                if p.protocol_name == name:
-                    return p
-
-    def _get_protocols(self, pkt):
-        protocols = {}
-        for p in pkt:
-            if hasattr(p, 'protocol_name'):
-                protocols[p.protocol_name] = p
-            else:
-                protocols['payload'] = p
-        return protocols
-
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures , CONFIG_DISPATCHER)
     def switch_features_handler(self , ev):
          #print "switch_features_handler is called"
@@ -102,13 +84,6 @@ class ProjectController(app_manager.RyuApp):
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocol(ethernet.ethernet)
  
-        p_arp = self._find_protocol(pkt, "arp")
-        eth = pkt.get_protocols(ethernet.ethernet)[0]
-
-        if eth.ethertype == ether_types.ETH_TYPE_LLDP:
-            # ignore lldp packet
-            return
-
         dst = eth.dst
         src = eth.src
         dpid = datapath.id
@@ -117,6 +92,7 @@ class ProjectController(app_manager.RyuApp):
         #print self.net.nodes()
         #print "edges"
         #print self.net.edges()
+        #self.logger.info("packet in %s %s %s %s", dpid, src, dst, in_port)
        
         if src not in self.net:
 	    print src
@@ -142,11 +118,7 @@ class ProjectController(app_manager.RyuApp):
         if out_port != ofproto.OFPP_FLOOD:
 		self.add_flow(datapath, in_port, dst, actions)
  
-        out = datapath.ofproto_parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,actions=actions, data=msg.data)
-	if p_arp:
-		print "ARP!"
-                self.logger.info("packet in %s %s %s %s", dpid, src, dst, out.in_port)
-		print out
+        out = datapath.ofproto_parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,actions=actions)
         datapath.send_msg(out)
    
     @set_ev_cls(event.EventSwitchEnter)
