@@ -15,6 +15,11 @@ class TopoTrabalhoFinal( Topo ):
 		s4 = self.addSwitch( 's4')
 		s5 = self.addSwitch( 's5')
 
+		# Duas interfaces para o PoP
+		self.addLink( h5,s2)
+		self.addLink( h5,s2)
+		
+		# Conexões entre switches
 		self.addLink( s1,s2)
 		self.addLink( s1,s3)
 		self.addLink( s1,s4)
@@ -27,11 +32,11 @@ class TopoTrabalhoFinal( Topo ):
 
 		self.addLink( s4,s5)
 
+		# Conexões para hosts
 		self.addLink( h1,s1)
 		self.addLink( h2,s4)
 		self.addLink( h3,s5)
 		self.addLink( h4,s1)
-		self.addLink( h5,s2)
 
 
 
