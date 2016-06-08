@@ -1,4 +1,7 @@
 # coding=utf-8
+from mininet.net import Containernet
+from mininet.node import Controller, Docker, OVSSwitch
+from mininet.cli import CLI
 from mininet.topo import Topo
 
 class TopoTrabalhoFinal( Topo ):
@@ -7,7 +10,7 @@ class TopoTrabalhoFinal( Topo ):
 		h2 = self.addHost( 'h2' ) #Servidor de video
 		h3 = self.addHost( 'h3' ) #Malicioso
 		h4 = self.addHost( 'h4' ) #End point do malicioso
-		h5 = self.addHost( 'h5' ) #Point of Presence
+		h5 = self.addHost( 'h5',cls=Docker, dimage='gmiotto/click') #Point of Presence
 
 		s1 = self.addSwitch( 's1')
 		s2 = self.addSwitch( 's2')
