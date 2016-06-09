@@ -1,0 +1,12 @@
+echo 1 > /proc/sys/net/ipv4/ip_forward
+route add -net 143.54.12.40 netmask 255.255.255.255 gw 143.54.12.72 - 143.54.12.181
+
+echo 1 > /proc/sys/net/ipv4/ip_forward
+route add -net 143.54.12.181 netmask 255.255.255.255 gw 143.54.12.33     -> 143.54.12.40
+
+
+assign 143.54.12.181 eth0
+
+assign 143.54.12.40 eth1
+
+

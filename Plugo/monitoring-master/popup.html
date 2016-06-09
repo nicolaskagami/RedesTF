@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Set Page Color Popup</title>
+    <style>
+    body {
+      overflow: hidden;
+      margin: 0px;
+      padding: 0px;
+      background: white;
+    }
+
+    div:first-child {
+      margin-top: 0px;
+    }
+
+    div {
+      cursor: pointer;
+      text-align: center;
+      padding: 1px 3px;
+      font-family: sans-serif;
+      font-size: 0.8em;
+      width: 400px;
+      margin-top: 1px;
+      background: #cccccc;
+    }
+    div:hover {
+      background: #aaaaaa;
+    }
+    .red {
+      border: 1px solid red;
+      color: red;
+    }
+    .green {
+      border: 1px solid green;
+      color: green;
+    }
+    </style>
+    <script src="script/popup.js"></script>
+    <script src="script/jquery-2.1.1.min.js"></script>
+  </head>
+  <body>
+    <div class="green" id="btn">Start Monitoring</div>
+  </body>
+
+  <div class="checkbox">
+    <label>
+      <input type="checkbox" value="">
+        Send statistics to study
+    </label>
+  </div>
+  <div id="problem">
+    <img src="img/close20.png" alt="Smiley face" height="42" width="42"> 
+    <label>Problem</label>
+  </div>
+</html>

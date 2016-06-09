@@ -1,0 +1,119 @@
+<form>
+  <div id="inicial">
+  <div class="form-group">
+    <label>Avalie a sua experiência com uma nota (1-5):</label>
+    <div id="rating"></div>
+  </div>
+
+  <div class="form-group">
+    <label>Tipo de conteúdo:</label>
+    <input type="text" class="form-control" id="conteudo" placeholder="Ação" value="Ação">
+  </div>
+
+  <div class="form-group">
+    <fieldset>
+    <label>Quantas horas você assite vídeos na Internet por dia:</label>
+    <div class="row">
+        <div class="col-md-4">
+            <input type="radio" name="tempo" value="1" checked> Menos de 1 hora
+        </div>
+        <div class="col-md-4">
+            <input type="radio" name="tempo" value="5"> Entre 1 e 3 horas
+        </div>
+        <div class="col-md-4">
+            <input type="radio" name="tempo" value="10"> Mais de 3 horas
+        </div>
+    </div>
+
+  </div>
+
+  <div class="form-group">
+    <label>Quantas dias por semana você assite vídeos na Internet:</label>
+    <input type="number" class="form-control" min="1" max="7" id="diario" placeholder="1" value="1">
+  </div>
+
+
+  <div class="form-group">
+    <label>Idade:</label>
+    <input type="number" class="form-control" min="10" max="100" id="idade" placeholder="24" value="24">
+  </div>
+
+  <div class="form-group">
+     <label>Sexo:</label>
+     <div class="row">
+      <div class="col-md-6">
+        <input type="radio" name="sex" value="Masculino" checked> Masculino
+      </div>
+      <div class="col-md-6">
+        <input type="radio" name="sex" value="Feminino"> Feminino
+      </div>
+    </div>
+  </div>  
+
+  <nav>
+  <ul class="pager">
+    <li class="previous disabled"><a href="#"><span aria-hidden="true">&larr;</span> Previous</a></li>
+    <li class="next" ><a id="proxPagina">Next <span aria-hidden="true">&rarr;</span></a></li>
+  </ul>
+</nav>
+
+</div>
+
+<div id="final">
+  <div class="form-group">
+    <label>País:</label>
+    <input type="text" class="form-control" id="pais" placeholder="Brasil" value="Brasil">
+  </div>
+  
+  
+
+  <div class="form-group">
+    <label>Sugestões e comentários:</label>
+    <textarea class="form-control" rows="5" id="comment" maxlength="250" placeholder="Entre aqui suas sugestões e comentários (250 caracteres)"></textarea>
+  </div>
+
+<nav>
+  <ul class="pager">
+    <li class="previous"><a id="prevPagina"><span aria-hidden="true">&larr;</span> Previous</a></li>
+    <li class="next disabled"><a href="#">Next <span aria-hidden="true">&rarr;</span></a></li>
+  </ul>
+</nav>
+
+</div>
+
+
+</form>
+
+
+
+
+    
+<script>
+    
+
+    jQuery(document).ready(function () {
+        $('#rating').raty();
+        $('#rating').raty('score', 1); 
+
+        $("#final").hide();
+        $("#proxPagina").click(function() {
+            $("#inicial").hide();
+            $("#final").show();
+        });
+        $("#prevPagina").click(function() {
+            $("#inicial").show();
+            $("#final").hide();
+        });
+
+        
+        
+
+
+
+        });
+
+    
+</script>
+</div>  
+</body>
+</html>

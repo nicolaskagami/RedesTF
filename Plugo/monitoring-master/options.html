@@ -1,0 +1,145 @@
+<html lang="en"><head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>Configurações</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="css/starter-template.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+   
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+
+
+
+
+<div class="col-md-6">
+  <div class="panel panel-primary">
+    <div class="panel-heading">Configurações</div>
+    <div class="panel-body">
+      
+    	<form>
+  
+
+  <div class="form-group">
+     <label>Monitorar transmissões de vídeo em HTML5:</label>
+     <div class="row">
+      <div class="col-md-6">
+        <input type="radio" name="monitorar" id="monitorar_t" value="true" checked> Sim
+      </div>
+      <div class="col-md-6">
+        <input type="radio" name="monitorar" id="monitorar_f" value="false"> Não
+      </div>
+    </div>
+  </div>
+  
+
+  <div id="monitorando">
+
+    <div class="form-group">
+    <label>Endereço para enviar resultados:</label>
+    <input type="text" class="form-control" id="endereco" placeholder="http://0.0.0.0:3000">
+  </div>
+
+  <div class="checkbox">
+    <label>
+      <input type="checkbox" id="enviar_para_servidor" checked> Enviar resultados
+    </label>
+  </div>
+  
+  
+  <div class="form-group">
+    <fieldset>
+     <label>Gerar questionário após transmissão:</label>
+     <div class="row">
+      <div class="col-md-6">
+        <input type="radio" name="questionario" id="questionario_t" value="true" checked> Sim
+      </div>
+      <div class="col-md-6">
+        <input type="radio" name="questionario" id="questionario_f" value="false"> Não
+      </div>
+    </div>
+  </div>
+ 
+
+  <div class="form-group">
+     <label>Salvar relatório localmente:</label>
+     <div class="row">
+      <div class="col-md-6">
+        <input type="radio" name="relatorio" id="relatorio_t" value="true"> Sim
+      </div>
+      <div class="col-md-6">
+        <input type="radio" name="relatorio" id="relatorio_f" value="false" checked> Não
+      </div>
+    </div>
+  </div>
+
+
+<div class="form-group">
+	<label>Intervalo de monitoramento (milissegundos): </label>
+	<input type="number" class="form-control" min="100" max="100000" id="intervalo_de_monitoramento" placeholder="1000" value="1000">
+</div>
+
+
+<div class="form-group">
+	<label>Tempo mínimo de stall (milissegundos):</label>
+	<input type="number" class="form-control" min="50" max="1000" id="intervalo_minimo_de_stall" placeholder="50" value="50">
+</div>
+
+</div>
+
+
+
+  	
+  <label id="status">&nbsp;</label>
+  <button type="button" id="save" class="btn btn-primary pull-right">Salvar</button>
+  
+</div>
+
+
+</form>
+
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="script/jquery-2.1.1.min.js"></script>
+    <script src="js/bootstrap.js"></script>
+  
+
+  	<script src="options.js"></script>
+
+
+
+</body></html>
+
+
+
+

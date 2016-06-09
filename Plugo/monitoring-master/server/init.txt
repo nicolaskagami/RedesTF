@@ -1,0 +1,3 @@
+Init server:
+
+node server.js
