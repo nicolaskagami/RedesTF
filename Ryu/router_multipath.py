@@ -1,48 +1,48 @@
-	# Trabalho final Protocolo de Comunicacao - 2014/1
-	# Professor: Luciano Paschoal Gaspary
-	#  Controlador para OpenFlow - criacao de multiplos caminhos para trafegos
-	#  Funciona com OpenFlow v. 1.3
-	# Desenvolvido por:
-	#  Gustavo Miotto - 171435 - gustavomiotto@gmail.com
-	#  Luis Antonio Leiva Hercules - 176038 - tonyleiva6@gmail.com
-	# Porto Alegre, 29 de Junho de 2014
-	# ( Esqueleto do codigo baseado no codigo simple_switch_13.py - Ryu Controller
-	#  disponivel em:  https://github.com/osrg/ryu/blob/master/ryu/app/simple_switch_13.py )
+    # Trabalho final Protocolo de Comunicacao - 2014/1
+    # Professor: Luciano Paschoal Gaspary
+    #  Controlador para OpenFlow - criacao de multiplos caminhos para trafegos
+    #  Funciona com OpenFlow v. 1.3
+    # Desenvolvido por:
+    #  Gustavo Miotto - 171435 - gustavomiotto@gmail.com
+    #  Luis Antonio Leiva Hercules - 176038 - tonyleiva6@gmail.com
+    # Porto Alegre, 29 de Junho de 2014
+    # ( Esqueleto do codigo baseado no codigo simple_switch_13.py - Ryu Controller
+    #  disponivel em:  https://github.com/osrg/ryu/blob/master/ryu/app/simple_switch_13.py )
 
-	from ryu.base import app_manager
-	from ryu.controller import (ofp_event, dpset)
-	from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, DEAD_DISPATCHER
-	from ryu.controller.handler import set_ev_cls
-	from ryu.ofproto import ofproto_v1_3, ether
-	from ryu.lib.packet import packet
-	from ryu.lib.packet import ethernet, ipv4, arp
-	import networkx as nx
-	import itertools
-	import random
-	import re
+    from ryu.base import app_manager
+    from ryu.controller import (ofp_event, dpset)
+    from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, DEAD_DISPATCHER
+    from ryu.controller.handler import set_ev_cls
+    from ryu.ofproto import ofproto_v1_3, ether
+    from ryu.lib.packet import packet
+    from ryu.lib.packet import ethernet, ipv4, arp
+    import networkx as nx
+    import itertools
+    import random
+    import re
 
-	ARP = arp.arp.__name__
-	IPV4 = ipv4.ipv4.__name__
-	UINT32_MAX = 0xffffffff
+    ARP = arp.arp.__name__
+    IPV4 = ipv4.ipv4.__name__
+    UINT32_MAX = 0xffffffff
 
-	PATH_SIZE = 6
-	MULTIPATH_LEVEL = 3
+    PATH_SIZE = 6
+    MULTIPATH_LEVEL = 3
 
-	##control variable for mininet shutdown
+    ##control variable for mininet shutdown
 
 
-	class RouterMultipath(app_manager.RyuApp):
-	    OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
-	    _CONTEXTS = {
-		'dpset': dpset.DPSet
-	    }
+    class RouterMultipath(app_manager.RyuApp):
+        OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
+        _CONTEXTS = {
+        'dpset': dpset.DPSet
+        }
 
-	    def __init__(self, *args, **kwargs):
-		super(RouterMultipath, self).__init__(*args, **kwargs)
-		self.mac_to_port = {}
-		self.dpset = kwargs['dpset']
-		self.dp_dict = {}   #dictionary of datapaths
-		self.elist = [] # edges list to the graph
+        def __init__(self, *args, **kwargs):
+        super(RouterMultipath, self).__init__(*args, **kwargs)
+        self.mac_to_port = {}
+        self.dpset = kwargs['dpset']
+        self.dp_dict = {}   #dictionary of datapaths
+        self.elist = [] # edges list to the graph
         self.edges_ports = {}   # dictionary that maps switches connections with ports
         self.parse_graph()      # call the function that populates the priors variables
         self.graph = nx.MultiGraph()    # create the graph
