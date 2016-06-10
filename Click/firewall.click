@@ -8,7 +8,7 @@ define($DEV h2)
 FromDevice($DEV-eth0, SNIFFER false, PROMISC true, BURST 8)	// read packets from device
    -> pkt :: Classifier(12/0800, -)
    -> ck :: CheckIPHeader(OFFSET 14)
-   -> IPFilter( #allow icmp,
+   -> IPFilter( allow icmp,
 		 allow tcp && dst port 8000,	
 		allow tcp && dst port 5001,	
 		allow udp && dst port 5001,
@@ -24,7 +24,7 @@ FromDevice($DEV-eth0, SNIFFER false, PROMISC true, BURST 8)	// read packets from
 FromDevice($DEV-eth1, SNIFFER false, PROMISC true, BURST 8 )	// read packets from device
    -> pkt1 :: Classifier(12/0800, -)
    -> ck1 :: CheckIPHeader(OFFSET 14)
-   -> IPFilter( #allow icmp, 
+   -> IPFilter( allow icmp, 
 		allow tcp && src port 8000,	
 		allow tcp && src port 5001,	
 		allow udp && src port 5001,
