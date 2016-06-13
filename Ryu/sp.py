@@ -160,8 +160,9 @@ class ProjectController(app_manager.RyuApp):
             print "dst:", dst 
  
             path=nx.shortest_path(self.net,src,dst)  
+            #path=nx.shortest_path(self.net,src,'00:00:00:00:00:03')  
             next=path[path.index(dpid)+1]
-            out_port=self.net[dpid][next][0]
+            out_port=self.net[dpid][next][0]['port']
             print "  outport: ", out_port
             print "  next: ", next
             print "  dpid: ", dpid
@@ -196,14 +197,18 @@ class ProjectController(app_manager.RyuApp):
           self.no_of_nodes += 1
        
         links_list = get_link(self.topology_api_app, None)
-        print links_list
-        links=[(link.src.dpid,link.dst.dpid,{'port':link.src.port_no}) for link in links_list]
-        print links
-        self.net.add_edges_from(links)
-        links=[(link.dst.dpid,link.src.dpid,{'port':link.dst.port_no}) for link in links_list]
-        print links
-        self.net.add_edges_from(links)
-        print "**********List of links"
+        #print links_list
+        #links=[(link.src.dpid,link.dst.dpid,port=link.src.port_no) for link in links_list]
+        #print links
+        #self.net.add_edges_from(links)
+        #links=[(link.dst.dpid,link.src.dpid,port=link.dst.port_no) for link in links_list]
+        #print links
+        #self.net.add_edges_from(links)
+        for link in links_list:
+            if (link.src.dpid,link.dst.dpid,link.src.port_no) not in list(self.net.edges_iter(data='port')):
+                self.net.add_edge(link.src.dpid,link.dst.dpid,port=link.src.port_no)
+                self.net.add_edge(link.dst.dpid,link.src.dpid,port=link.dst.port_no)
+        print "List of links"
         print self.net.edges(data=True, keys=True)
         #nx.draw(self.net);
         #plt.show();
