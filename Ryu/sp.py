@@ -45,6 +45,8 @@ ip_to_mac = {
 	'10.0.0.4' : '00:00:00:00:00:04',
 	'10.0.0.5' : '00:00:00:00:00:05'
 	}
+PoPs = [ '00:00:00:00:00:03' ]
+SFCs = { '00:00:00:00:00:05':  ('00:00:00:00:00:03') }
 class ProjectController(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
  
@@ -135,40 +137,38 @@ class ProjectController(app_manager.RyuApp):
 
         p_arp = pkt.get_protocol(arp.arp)
         if p_arp:
-            print "ARP!"
             ipv4_src = ip.src if ip != None else p_arp.src_ip
             ipv4_dst = ip.dst if ip != None else p_arp.dst_ip
-            print ipv4_src
-            print ipv4_dst
-	    print pkt
             target_mac = ip_to_mac[ipv4_dst]
-            print target_mac
+            print "ARP!", ipv4_src, ipv4_dst
             self.send_arp(datapath, arp.ARP_REPLY, target_mac ,src, ipv4_dst, ipv4_src,src, ofproto.OFPP_CONTROLLER, in_port)
             return
        
+            
         if src not in self.net:
-            print "1 Src:", src
+            #print "1 Src:", src
             self.net.add_node(src)
             self.net.add_edge(dpid,src,port=in_port)
             self.net.add_edge(src,dpid)
         if dst in self.net:
             #print "2"
-            #print (src in self.net)
-            #print nx.shortest_path(self.net,1,4)
-            #print nx.shortest_path(self.net,4,1)
-            #print nx.shortest_path(self.net,src,4)
-            print "dst:", dst 
- 
-            path=nx.shortest_path(self.net,src,dst)  
+            if dst in SFCs.keys():
+                path=(nx.shortest_path(self.net,src,SFCs[dst]), nx.shortest_path(self.net,SFCs[dst],dst))  
+                #Tag the flow!
+                #if dpid == 3:
+                #    if in_port == 2:
+                #        next 
+            else:
+                print "b:", dst 
+                path=nx.shortest_path(self.net,src,dst)  
+                next=path[path.index(dpid)+1]
+                out_port=self.net[dpid][next][0]['port']
             #path=nx.shortest_path(self.net,src,'00:00:00:00:00:03')  
-            next=path[path.index(dpid)+1]
-            out_port=self.net[dpid][next][0]['port']
+            print "  path: ", path
             print "  outport: ", out_port
             print "  next: ", next
             print "  dpid: ", dpid
-            print "  path: ", path
-            print "  out_port: ", out_port
-            print self.net.edges(data=True, keys=True)
+            #print self.net.edges(data=True, keys=True)
         else:
             #print "3"
             out_port = ofproto.OFPP_FLOOD
