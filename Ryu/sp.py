@@ -27,7 +27,8 @@ from ryu.lib.packet import arp
 from ryu.lib.packet import ipv4
 from ryu.lib.packet import icmp
 from ryu.lib import mac
- 
+
+import ryu.app.ofctl.api as api 
 from ryu.topology.api import get_switch, get_link
 from ryu.app.wsgi import ControllerBase
 from ryu.topology import event, switches
@@ -64,6 +65,30 @@ class ProjectController(app_manager.RyuApp):
     # Handy function that lists all attributes in the given object
     def ls(self,obj):
         print("\n".join([x for x in dir(obj) if x[0] != "_"]))
+
+    def add_sfc_flow(self, datapath, dst, actions, sfcId):
+        print "Adding SFC flow", datapath.id
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser      
+        match = datapath.ofproto_parser.OFPMatch(eth_type=0x0800,ip_dscp=sfcId , eth_dst=dst)
+        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)] 
+        mod = datapath.ofproto_parser.OFPFlowMod(
+            datapath=datapath, match=match, cookie=0,
+            command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0,
+            priority=ofproto.OFP_DEFAULT_PRIORITY, instructions=inst)
+        datapath.send_msg(mod)
+
+    def add_sfc_pop_flow(self, datapath, in_port, dst, actions, sfcId):
+        print "Adding SFC flow PoP: ", datapath.id
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser      
+        match = datapath.ofproto_parser.OFPMatch(eth_type=0x0800,ip_dscp=sfcId,in_port=in_port, eth_dst=dst)
+        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)] 
+        mod = datapath.ofproto_parser.OFPFlowMod(
+            datapath=datapath, match=match, cookie=0,
+            command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0,
+            priority=ofproto.OFP_DEFAULT_PRIORITY+1, instructions=inst)
+        datapath.send_msg(mod)
  
     def add_flow(self, datapath, in_port, dst, actions):
         print "Adding flow"
@@ -153,17 +178,75 @@ class ProjectController(app_manager.RyuApp):
         if dst in self.net:
             #print "2"
             if dst in SFCs.keys():
-                path=(nx.shortest_path(self.net,src,SFCs[dst]), nx.shortest_path(self.net,SFCs[dst],dst))  
+                #path=(nx.shortest_path(self.net,src,SFCs[dst]), nx.shortest_path(self.net,SFCs[dst],dst))  
                 #Tag the flow!
                 #if dpid == 3:
                 #    if in_port == 2:
-                #        next 
+                #actions = [
+                #           datapath.ofproto_parser.OFPActionSetField(ip_dscp=0),
+                #           datapath.ofproto_parser.OFPActionOutput(out_port)
+                #          ]
+                #self.add_sfc_flow(datapath, in_port, dst, actions,0)
+                #if dpid == 3:
+                #    actions = [
+                #               datapath.ofproto_parser.OFPActionSetField(ip_dscp=1),
+                #               datapath.ofproto_parser.OFPActionOutput(out_port)
+                #              ]
+                #    self.add_sfc_flow(datapath, in_port, dst, actions,0)
+
+                #actions = [
+                #           datapath.ofproto_parser.OFPActionSetField(ip_dscp=0),
+                #           datapath.ofproto_parser.OFPActionOutput(out_port)
+                #          ]
+                #self.add_flow(datapath, in_port, dst, actions)
+                
+
+                path=nx.shortest_path(self.net,src,SFCs[dst])  
+                for i in path:
+                    if isinstance(i,int):
+                        switchDP = api.get_datapath(self, i)
+                        #switchId = switchDP.id
+                        next = path[path.index(i)+1]
+                        out_port = self.net[i][next][0]['port']
+                        print i, out_port, next
+                        actions = [
+                                   switchDP.ofproto_parser.OFPActionSetField(ip_dscp=0),
+                                   switchDP.ofproto_parser.OFPActionOutput(out_port)
+                                  ]
+                        self.add_sfc_flow(switchDP, dst, actions,0)
+                        last = i
+                print "last: ", last
+                actions = [
+                           switchDP.ofproto_parser.OFPActionSetField(ip_dscp=1),
+                           switchDP.ofproto_parser.OFPActionOutput(out_port)
+                          ]
+                self.add_sfc_pop_flow(switchDP, 2, dst, actions,0)
+                
+
+                path=nx.shortest_path(self.net,SFCs[dst],dst)  
+                for i in path:
+                    if isinstance(i,int):
+                        switchDP = api.get_datapath(self, i)
+                        #switchId = switchDP.id
+                        next = path[path.index(i)+1]
+                        out_port = self.net[i][next][0]['port']
+                        print i, out_port, next
+                        actions = [
+                                   #switchDP.ofproto_parser.OFPActionSetField(ip_dscp=1),
+                                   switchDP.ofproto_parser.OFPActionOutput(out_port)
+                                  ]
+                        self.add_sfc_flow(switchDP, dst, actions,1)
+                        last = i
+
             else:
                 print "b:", dst 
                 path=nx.shortest_path(self.net,src,dst)  
                 next=path[path.index(dpid)+1]
                 out_port=self.net[dpid][next][0]['port']
             #path=nx.shortest_path(self.net,src,'00:00:00:00:00:03')  
+                actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+                self.add_flow(datapath, in_port, dst, actions)
+
             print "  path: ", path
             print "  outport: ", out_port
             print "  next: ", next
@@ -174,10 +257,9 @@ class ProjectController(app_manager.RyuApp):
             out_port = ofproto.OFPP_FLOOD
             return
  
-        actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
         # install a flow to avoid packet_in next time
-        if out_port != ofproto.OFPP_FLOOD:
-            self.add_flow(datapath, in_port, dst, actions)
+        #if out_port != ofproto.OFPP_FLOOD:
+        #    self.add_flow(datapath, in_port, dst, actions)
  
         out = datapath.ofproto_parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,actions=actions, data=msg.data)
 
@@ -190,11 +272,11 @@ class ProjectController(app_manager.RyuApp):
         self.net.add_nodes_from(switches)
         
         #print "**********List of switches"
-        for switch in switch_list:
+        #for switch in switch_list:
           #self.ls(switch)
           #print switch
-          self.nodes[self.no_of_nodes] = switch
-          self.no_of_nodes += 1
+        #  self.nodes[self.no_of_nodes] = switch
+        #  self.no_of_nodes += 1
        
         links_list = get_link(self.topology_api_app, None)
         #print links_list
@@ -207,6 +289,7 @@ class ProjectController(app_manager.RyuApp):
         for link in links_list:
             if (link.src.dpid,link.dst.dpid,link.src.port_no) not in list(self.net.edges_iter(data='port')):
                 self.net.add_edge(link.src.dpid,link.dst.dpid,port=link.src.port_no)
+            if (link.dst.dpid,link.src.dpid,link.dst.port_no) not in list(self.net.edges_iter(data='port')):
                 self.net.add_edge(link.dst.dpid,link.src.dpid,port=link.dst.port_no)
         print "List of links"
         print self.net.edges(data=True, keys=True)
