@@ -44,7 +44,8 @@ ip_to_mac = {
 	'10.0.0.2' : '00:00:00:00:00:02',
 	'10.0.0.3' : '00:00:00:00:00:03',
 	'10.0.0.4' : '00:00:00:00:00:04',
-	'10.0.0.5' : '00:00:00:00:00:05'
+	'10.0.0.5' : '00:00:00:00:00:05',
+	'10.0.0.99' : '00:00:00:00:00:99'
 	}
 PoPs = [ '00:00:00:00:00:03' ]
 SFCs = { '00:00:00:00:00:05':  ('00:00:00:00:00:03') }
@@ -219,7 +220,9 @@ class ProjectController(app_manager.RyuApp):
                         switchDP = api.get_datapath(self, i)
                         #switchId = switchDP.id
                         next = path[path.index(i)+1]
-                        out_port = self.net[i][next][0]['port']
+                        pathes=self.net[i][next]
+                        out_port=[pathes[p]['port'] for p in pathes if 'port' in pathes[p]][0]
+                        #out_port = self.net[i][next][0]['port']
                         print i, out_port, next
                         if i == dpid:
                             actions = [
@@ -237,7 +240,7 @@ class ProjectController(app_manager.RyuApp):
                             self.add_sfc_flow(switchDP, dst, actions,0)
                         last = i
 
-                print "last: ", last
+                print "POP: ", last
                 actions = [
                            switchDP.ofproto_parser.OFPActionSetField(ip_dscp=1),
                            switchDP.ofproto_parser.OFPActionOutput(4)
@@ -252,7 +255,9 @@ class ProjectController(app_manager.RyuApp):
                         switchDP = api.get_datapath(self, i)
                         #switchId = switchDP.id
                         next = path[path.index(i)+1]
-                        out_port = self.net[i][next][0]['port']
+                        pathes=self.net[i][next]
+                        out_port=[pathes[p]['port'] for p in pathes if 'port' in pathes[p]][0]
+                        #out_port = self.net[i][next][0]['port']
                         print i, out_port, next
                         if next == dst:
                             actions = [
@@ -272,7 +277,9 @@ class ProjectController(app_manager.RyuApp):
                 print "b:", dst 
                 path=nx.shortest_path(self.net,src,dst)  
                 next=path[path.index(dpid)+1]
-                out_port=self.net[dpid][next][0]['port']
+                pathes=self.net[dpid][next]
+                out_port=[pathes[p]['port'] for p in pathes if 'port' in pathes[p]][0]
+                #out_port=self.net[dpid][next][0]['port']
             #path=nx.shortest_path(self.net,src,'00:00:00:00:00:03')  
                 actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
                 self.add_flow(datapath, in_port, dst, actions)

@@ -1,0 +1,25 @@
+1 ------------------------------------------------------------------------
+OFPST_FLOW reply (OF1.3) (xid=0x2):
+ cookie=0x0, duration=8.952s, table=0, n_packets=0, n_bytes=0, ip,dl_dst=00:00:00:00:00:05,nw_tos=0 actions=output:1
+ cookie=0x0, duration=84.256s, table=0, n_packets=32, n_bytes=17080, ip,in_port=2,dl_dst=00:00:00:00:00:05 actions=set_field:0->nw_tos_shifted,output:1
+ cookie=0x0, duration=74.175s, table=0, n_packets=9, n_bytes=678, ip,in_port=1,dl_dst=00:00:00:00:00:01 actions=output:2
+*** s2 ------------------------------------------------------------------------
+OFPST_FLOW reply (OF1.3) (xid=0x2):
+ cookie=0x0, duration=84.26s, table=0, n_packets=31, n_bytes=17046, ip,dl_dst=00:00:00:00:00:05,nw_tos=0 actions=output:2
+ cookie=0x0, duration=74.185s, table=0, n_packets=9, n_bytes=678, ip,in_port=2,dl_dst=00:00:00:00:00:01 actions=output:1
+ cookie=0x0, duration=8.956s, table=0, n_packets=1, n_bytes=66, ip,in_port=1,dl_dst=00:00:00:00:00:05 actions=set_field:0->nw_tos_shifted,output:2
+*** s3 ------------------------------------------------------------------------
+OFPST_FLOW reply (OF1.3) (xid=0x2):
+ cookie=0x0, duration=8.958s, table=0, n_packets=33, n_bytes=17178, ip,dl_dst=00:00:00:00:00:05,nw_tos=0 actions=output:1
+ cookie=0x0, duration=8.955s, table=0, n_packets=0, n_bytes=0, ip,dl_dst=00:00:00:00:00:05,nw_tos=4 actions=output:4
+ cookie=0x0, duration=74.195s, table=0, n_packets=9, n_bytes=678, ip,in_port=4,dl_dst=00:00:00:00:00:01 actions=output:3
+ cookie=0x0, duration=8.958s, table=0, n_packets=24, n_bytes=3328, priority=32769,ip,in_port=2,dl_dst=00:00:00:00:00:05,nw_tos=0 actions=set_field:1->nw_tos_shifted,output:4
+*** s4 ------------------------------------------------------------------------
+OFPST_FLOW reply (OF1.3) (xid=0x2):
+ cookie=0x0, duration=8.956s, table=0, n_packets=24, n_bytes=3328, ip,dl_dst=00:00:00:00:00:05,nw_tos=4 actions=output:2
+ cookie=0x0, duration=74.202s, table=0, n_packets=9, n_bytes=678, ip,in_port=2,dl_dst=00:00:00:00:00:01 actions=output:1
+*** s5 ------------------------------------------------------------------------
+OFPST_FLOW reply (OF1.3) (xid=0x2):
+ cookie=0x0, duration=8.957s, table=0, n_packets=24, n_bytes=3328, ip,dl_dst=00:00:00:00:00:05,nw_tos=4 actions=set_field:0->nw_tos_shifted,output:2
+ cookie=0x0, duration=74.209s, table=0, n_packets=9, n_bytes=678, ip,in_port=2,dl_dst=00:00:00:00:00:01 actions=output:1
+
