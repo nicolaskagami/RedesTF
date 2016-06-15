@@ -78,8 +78,20 @@ class ProjectController(app_manager.RyuApp):
             priority=ofproto.OFP_DEFAULT_PRIORITY, instructions=inst)
         datapath.send_msg(mod)
 
+    def add_first_flow(self, datapath,in_port, dst, actions):
+        print "Adding SFC flow", datapath.id
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser      
+        match = datapath.ofproto_parser.OFPMatch(eth_type=0x0800, in_port=in_port, eth_dst=dst)
+        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)] 
+        mod = datapath.ofproto_parser.OFPFlowMod(
+            datapath=datapath, match=match, cookie=0,
+            command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0,
+            priority=ofproto.OFP_DEFAULT_PRIORITY, instructions=inst)
+        datapath.send_msg(mod)
+
     def add_sfc_pop_flow(self, datapath, in_port, dst, actions, sfcId):
-        print "Adding SFC flow PoP: ", datapath.id
+        print "Adding SFC flow PoP: ", datapath.id, in_port
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser      
         match = datapath.ofproto_parser.OFPMatch(eth_type=0x0800,ip_dscp=sfcId,in_port=in_port, eth_dst=dst)
@@ -94,7 +106,7 @@ class ProjectController(app_manager.RyuApp):
         print "Adding flow"
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser      
-        match = datapath.ofproto_parser.OFPMatch(in_port=in_port, eth_dst=dst)
+        match = datapath.ofproto_parser.OFPMatch(eth_type=0x800,in_port=in_port, eth_dst=dst)
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)] 
         mod = datapath.ofproto_parser.OFPFlowMod(
             datapath=datapath, match=match, cookie=0,
@@ -177,7 +189,7 @@ class ProjectController(app_manager.RyuApp):
             self.net.add_edge(src,dpid)
         if dst in self.net:
             #print "2"
-            if dst in SFCs.keys():
+            if dst in SFCs.keys() and ip != None:
                 #path=(nx.shortest_path(self.net,src,SFCs[dst]), nx.shortest_path(self.net,SFCs[dst],dst))  
                 #Tag the flow!
                 #if dpid == 3:
@@ -209,21 +221,32 @@ class ProjectController(app_manager.RyuApp):
                         next = path[path.index(i)+1]
                         out_port = self.net[i][next][0]['port']
                         print i, out_port, next
-                        actions = [
-                                   switchDP.ofproto_parser.OFPActionSetField(ip_dscp=0),
-                                   switchDP.ofproto_parser.OFPActionOutput(out_port)
-                                  ]
-                        self.add_sfc_flow(switchDP, dst, actions,0)
+                        if i == dpid:
+                            actions = [
+                                       switchDP.ofproto_parser.OFPActionSetField(ip_dscp=0),
+                                       switchDP.ofproto_parser.OFPActionOutput(out_port)
+                                      ]
+                            self.add_first_flow(switchDP,in_port, dst, actions)
+                            out = datapath.ofproto_parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,actions=actions, data=msg.data)
+
+                        else:
+                            actions = [
+                                       #switchDP.ofproto_parser.OFPActionSetField(ip_dscp=0),
+                                       switchDP.ofproto_parser.OFPActionOutput(out_port)
+                                      ]
+                            self.add_sfc_flow(switchDP, dst, actions,0)
                         last = i
+
                 print "last: ", last
                 actions = [
                            switchDP.ofproto_parser.OFPActionSetField(ip_dscp=1),
-                           switchDP.ofproto_parser.OFPActionOutput(out_port)
+                           switchDP.ofproto_parser.OFPActionOutput(4)
                           ]
                 self.add_sfc_pop_flow(switchDP, 2, dst, actions,0)
                 
 
                 path=nx.shortest_path(self.net,SFCs[dst],dst)  
+                #path=nx.shortest_path(self.net,src,dst)  
                 for i in path:
                     if isinstance(i,int):
                         switchDP = api.get_datapath(self, i)
@@ -231,13 +254,20 @@ class ProjectController(app_manager.RyuApp):
                         next = path[path.index(i)+1]
                         out_port = self.net[i][next][0]['port']
                         print i, out_port, next
-                        actions = [
-                                   #switchDP.ofproto_parser.OFPActionSetField(ip_dscp=1),
-                                   switchDP.ofproto_parser.OFPActionOutput(out_port)
-                                  ]
-                        self.add_sfc_flow(switchDP, dst, actions,1)
-                        last = i
-
+                        if next == dst:
+                            actions = [
+                                       switchDP.ofproto_parser.OFPActionSetField(ip_dscp=0),
+                                       switchDP.ofproto_parser.OFPActionOutput(out_port)
+                                      ]
+                            self.add_sfc_flow(switchDP, dst, actions,1)
+                        else:
+                            actions = [
+                                       switchDP.ofproto_parser.OFPActionOutput(out_port)
+                                      ]
+                            self.add_sfc_flow(switchDP, dst, actions,1)
+                        #self.add_flow_debug(switchDP, dst, actions)
+                datapath.send_msg(out)
+                return
             else:
                 print "b:", dst 
                 path=nx.shortest_path(self.net,src,dst)  
