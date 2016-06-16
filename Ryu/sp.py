@@ -48,7 +48,9 @@ ip_to_mac = {
 	'10.0.0.99' : '00:00:00:00:00:99'
 	}
 PoPs = [ '00:00:00:00:00:03' ]
-SFCs = { '00:00:00:00:00:05':  ('00:00:00:00:00:03') }
+SFCs = { 
+         '00:00:00:00:00:05':  ('00:00:00:00:00:03')
+       }
 class ProjectController(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
  
@@ -215,6 +217,7 @@ class ProjectController(app_manager.RyuApp):
                 
 
                 path=nx.shortest_path(self.net,src,SFCs[dst])  
+                print path
                 for i in path:
                     if isinstance(i,int):
                         switchDP = api.get_datapath(self, i)
@@ -225,12 +228,20 @@ class ProjectController(app_manager.RyuApp):
                         #out_port = self.net[i][next][0]['port']
                         print i, out_port, next
                         if i == dpid:
+                            print "First"
                             actions = [
                                        switchDP.ofproto_parser.OFPActionSetField(ip_dscp=0),
                                        switchDP.ofproto_parser.OFPActionOutput(out_port)
                                       ]
-                            self.add_first_flow(switchDP,in_port, dst, actions)
+                            self.add_first_flow(datapath,in_port, dst, actions)
                             out = datapath.ofproto_parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,actions=actions, data=msg.data)
+                        elif next == SFCs[dst]:
+                            print "next"
+                            actions = [
+                                switchDP.ofproto_parser.OFPActionSetField(ip_dscp=1),
+                                switchDP.ofproto_parser.OFPActionOutput(1)
+                                      ]
+                            self.add_sfc_pop_flow(switchDP, 3, dst, actions,0)
 
                         else:
                             actions = [
@@ -238,6 +249,7 @@ class ProjectController(app_manager.RyuApp):
                                        switchDP.ofproto_parser.OFPActionOutput(out_port)
                                       ]
                             self.add_sfc_flow(switchDP, dst, actions,0)
+                            
                         last = i
 
                 print "POP: ", last
@@ -245,13 +257,13 @@ class ProjectController(app_manager.RyuApp):
                            switchDP.ofproto_parser.OFPActionSetField(ip_dscp=1),
                            switchDP.ofproto_parser.OFPActionOutput(4)
                           ]
-                self.add_sfc_pop_flow(switchDP, 2, dst, actions,0)
+                self.add_sfc_pop_flow(switchDP, 2, dst, actions,1)
                 
 
                 path=nx.shortest_path(self.net,SFCs[dst],dst)  
                 #path=nx.shortest_path(self.net,src,dst)  
                 for i in path:
-                    if isinstance(i,int):
+                    if isinstance(i,int) and i != last:
                         switchDP = api.get_datapath(self, i)
                         #switchId = switchDP.id
                         next = path[path.index(i)+1]
