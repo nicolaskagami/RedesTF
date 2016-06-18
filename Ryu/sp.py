@@ -36,11 +36,19 @@ ip_to_mac = {
 	'10.0.0.5' : '00:00:00:00:00:05',
 	'10.0.0.99' : '00:00:00:00:00:99'
 	}
-PoPs = [ '00:00:00:00:00:03' ]
-SFCs = { 
-         '00:00:00:00:00:04':  ['00:00:00:00:00:03','00:00:00:00:00:04'],
-         '00:00:00:00:00:01':  ['00:00:00:00:00:03','00:00:00:00:00:01']
+#PoPs = [ '00:00:00:00:00:03',  '00:00:00:00:00:04', '00:00:00:00:00:05']
+PoPs = { 
+        '10.0.0.3': {'type': 'firewall','flows': [], 'status' : 'ok'},
+        '10.0.0.4': {'type': 'firewall','flows': [], 'status' : 'bad'},
+        '10.0.0.5': {'type': 'firewall','flows': [], 'status' : 'bad'}
        }
+SFCs = { 
+         '00:00:00:00:00:02':  ['00:00:00:00:00:03','00:00:00:00:00:02'],
+         '00:00:00:00:00:01':  ['00:00:00:00:00:03','00:00:00:00:00:01'],
+         '10.0.0.2':  ['firewall'],
+         '10.0.0.1':  ['firewall']
+       }
+SFC_flows = {} 
 class ProjectController(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
  
@@ -104,16 +112,22 @@ class ProjectController(app_manager.RyuApp):
             priority=priority, instructions=inst)
         datapath.send_msg(mod)
 
+    def select_pop(self,pop_type):
+        for pop in PoPs.keys():
+            if PoPs[pop]['type'] == pop_type:
+                best = pop
+                if PoPs[pop]['status'] == 'ok':
+                    return pop
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures , CONFIG_DISPATCHER)
     def switch_features_handler(self , ev):
-         datapath = ev.msg.datapath
-         ofproto = datapath.ofproto
-         parser = datapath.ofproto_parser
-         match = parser.OFPMatch()
-         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER)]
-         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS , actions)]
-         mod = datapath.ofproto_parser.OFPFlowMod(datapath=datapath, match=match, cookie=0,command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0, priority=0, instructions=inst)
-         datapath.send_msg(mod)
+        datapath = ev.msg.datapath
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
+        match = parser.OFPMatch()
+        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER)]
+        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS , actions)]
+        mod = datapath.ofproto_parser.OFPFlowMod(datapath=datapath, match=match, cookie=0,command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0, priority=0, instructions=inst)
+        datapath.send_msg(mod)
  
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
@@ -154,16 +168,25 @@ class ProjectController(app_manager.RyuApp):
        
         if dst in self.net:
 
-            if dst in SFCs.keys() and ip != None:
+            if ip != None and ip.dst in SFCs.keys():
+                if (ip.dst,ip.src) in SFC_flows.keys():
+                    print "Reflowing: DPID", dpid, ip.src, "->", ip.dst 
+                    return
+                else:
+                    SFC_flows[(ip.dst,ip.src)] = []
                 path_source = src
-                for pop in SFCs[dst]:
-                    path_target = pop 
+                whole_path = SFCs[ip.dst]
+                whole_path.append(ip.dst)
+                for pop in whole_path:
+                    if pop == ip.dst:
+                        path_target = ip_to_mac[pop]
+                    else:
+                        path_target = ip_to_mac[self.select_pop(pop)]
                     path=nx.shortest_path(self.net,path_source,path_target)  
+                    SFC_flows[(ip.dst,ip.src)].append(path)
                     first = True
-                    print path
                     for i in path:
                         if isinstance(i,int):
-                            print i
                             switchDP = api.get_datapath(self, i)
                             next = path[path.index(i)+1]
                             pathes=self.net[i][next]
@@ -172,7 +195,7 @@ class ProjectController(app_manager.RyuApp):
                             if first:
                                 first = False
                                 if path_source == src:
-                                    first_packet_actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
+                                    first_packet_actions = [datapath.ofproto_parser.OFPActionSetField(ip_dscp=1), datapath.ofproto_parser.OFPActionOutput(out_port) ]
                                     actions.append(switchDP.ofproto_parser.OFPActionSetField(ip_dscp=1))
                                     match = switchDP.ofproto_parser.OFPMatch(eth_type=0x800,in_port=in_port, ipv4_src=ip.src,ipv4_dst=ip.dst)
                                 else:
@@ -190,6 +213,7 @@ class ProjectController(app_manager.RyuApp):
                             #else
                             #    #add_flow
                     path_source = path_target
+                #print SFC_flows  
 
                 out = datapath.ofproto_parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,actions=first_packet_actions, data=msg.data)
                 datapath.send_msg(out)
