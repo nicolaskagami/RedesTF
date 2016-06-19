@@ -7,14 +7,16 @@
 FromDevice($DEV-eth0, SNIFFER false, PROMISC true)	// read packets from device
    -> pkt :: Classifier(12/0800, -)
    -> ck :: CheckIPHeader(OFFSET 14)
-   -> IPFilter( allow icmp,
-		 allow tcp && dst port 8000,	
+   -> IPFilter( 
+		allow icmp,
+		allow tcp && dst port 8000,	
 		allow tcp && dst port 5001,	
 		allow udp && dst port 5001,
 		allow tcp && dst port 5201,
-    allow udp && dst port 11111,
-    allow tcp && dst port 8080,
-		drop all)
+    		allow udp && dst port 11111,
+		allow tcp && dst port 8080,
+		drop all
+		)
    -> queue :: ThreadSafeQueue(10000000)
    pkt[1] -> queue
    ck[1] -> queue

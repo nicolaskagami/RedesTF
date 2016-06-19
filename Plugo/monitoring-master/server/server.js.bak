@@ -4,13 +4,12 @@ var bodyParser = require("body-parser");
 var app = express()
 
 //app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json({limit: '50mb'}));
-app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
+app.use(bodyParser.json());
 app.use(express.static(__dirname + "/public"));
 
 
 
-var video_information_id_ = 40000000;
+var video_information_id_ = 40000;
 
 
 
@@ -24,10 +23,10 @@ var data;
 try {
   data = fs.readFileSync('index-node.txt');
 } catch (e) {
-  fs.writeFile('index-node.txt', "40000000", function (err) {
+  fs.writeFile('index-node.txt', "400000", function (err) {
     if (err) throw err;
   });
-  data = "40000000";
+  data = "400000";
 }
 
 video_information_id_ = parseInt(data);
@@ -595,12 +594,9 @@ function insert_into_buffer_interval(req, video_id) {
 
 
 
-app.post('/api/monitor', bodyParser({limit:'30mb'}), function (req, res){
+app.post('/api/monitor', function (req, res){
   console.log("Monitoring info received");
   
-  fs.writeFile('index-node.txt', (video_information_id_ + 1).toString(), function (err) {
-    if (err) throw err;
-  });
 
   var results = insert_into_video_information(req);
   var video_id = results.video_id;
@@ -619,7 +615,7 @@ app.post('/api/monitor', bodyParser({limit:'30mb'}), function (req, res){
   insert_into_frame_per_second(req, video_id);
   insert_into_buffer_interval(req, video_id);
   xw.endDocument();
-  alert(results.file_name); 
+  
   fs.writeFile(results.file_name + '.xml', xw.toString(), function (err) {
     if (err) throw err;
   });
@@ -631,9 +627,11 @@ app.post('/api/monitor', bodyParser({limit:'30mb'}), function (req, res){
 
   console.log("Monitoring info saved");
 
-  
+  fs.writeFile('index-node.txt', video_information_id_.toString(), function (err) {
+    if (err) throw err;
+  });
 
-  exec('curl --form "report=@'+results.file_name+'.xml" http://200.220.254.22/mom/reports/send', puts);
+  exec('curl --form "report=@'+results.file_name+'.xml" http://200.220.254.84/mom/reports/send', puts);
 
   res.json(JSON.stringify(return_object));
 
@@ -692,14 +690,14 @@ function insert_into_questionario(req) {
 
 
 
-function randomstring(length, chars) {
+function randomString(length, chars) {
     var mask = '';
-    if (chars.indexof('a') > -1) mask += 'abcdefghijklmnopqrstuvwxyz';
-    if (chars.indexof('a') > -1) mask += 'abcdefghijklmnopqrstuvwxyz';
-    if (chars.indexof('#') > -1) mask += '0123456789';
-    if (chars.indexof('!') > -1) mask += '~`!@#$%^&*()_+-={}[]:";\'<>?,./|\\';
+    if (chars.indexOf('a') > -1) mask += 'abcdefghijklmnopqrstuvwxyz';
+    if (chars.indexOf('A') > -1) mask += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (chars.indexOf('#') > -1) mask += '0123456789';
+    if (chars.indexOf('!') > -1) mask += '~`!@#$%^&*()_+-={}[]:";\'<>?,./|\\';
     var result = '';
-    for (var i = length; i > 0; --i) result += mask[math.round(math.random() * (mask.length - 1))];
+    for (var i = length; i > 0; --i) result += mask[Math.round(Math.random() * (mask.length - 1))];
     return result;
 }
 

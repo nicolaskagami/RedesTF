@@ -8,8 +8,8 @@ class TopoTrabalhoFinal( Topo ):
 	def build(self):
 		h1 = self.addHost( 'h1' );#cliente de vídeo
 		h2 = self.addHost( 'h2' ) #Servidor de video
-		#h3 = self.addHost( 'h3',cls=Docker, dimage='gmiotto/click') #Point of Presence
-		h3 = self.addHost( 'h3' ) #Servidor de video
+		h3 = self.addHost( 'h3',cls=Docker, dimage='gmiotto/click') #Point of Presence
+		#h3 = self.addHost( 'h3' ) #Servidor de video
 		h4 = self.addHost( 'h4' ) #End point do malicioso
 		h5 = self.addHost( 'h5' ) #Malicioso
 

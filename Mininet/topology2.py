@@ -19,8 +19,8 @@ def tfTopo():
  h1 = net.addHost('h1', ip='10.0.0.1', mac='00:00:00:00:00:01')
  h2 = net.addHost('h2', ip='10.0.0.2', mac='00:00:00:00:00:02')
  h3 = net.addHost('h3', ip='10.0.0.3', mac='00:00:00:00:00:03', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10)
- h4 = net.addHost('h4', ip='10.0.0.4', mac='00:00:00:00:00:04')
- h5 = net.addHost('h5', ip='10.0.0.5', mac='00:00:00:00:00:05')
+ h4 = net.addHost('h4', ip='10.0.0.4', mac='00:00:00:00:00:04', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10)
+ h5 = net.addHost('h5', ip='10.0.0.5', mac='00:00:00:00:00:05', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10)
 
  #Switches
  s1 = net.addSwitch('s1')
@@ -28,19 +28,40 @@ def tfTopo():
  s3 = net.addSwitch('s3')
  s4 = net.addSwitch('s4')
  s5 = net.addSwitch('s5')
+ s6 = net.addSwitch('s6')
+ s7 = net.addSwitch('s7')
+ s8 = net.addSwitch('s8')
+ s9 = net.addSwitch('s9')
 
  net.addLink(h3,s3)
  net.addLink(h3,s3)
 
- net.addLink(s1,s2)
- net.addLink(s2,s3)
- net.addLink(s3,s4)
- net.addLink(s4,s5)
+ net.addLink(h4,s4)
+ net.addLink(h4,s4)
+
+ net.addLink(h5,s5)
+ net.addLink(h5,s5)
+
+ net.addLink(s1,s6)
+ net.addLink(s1,s7)
+
+ net.addLink(s6,s3)
+ net.addLink(s6,s4)
+ net.addLink(s6,s5)
+ net.addLink(s7,s3)
+ net.addLink(s7,s5)
+ 
+ net.addLink(s3,s8)
+ net.addLink(s3,s9)
+ net.addLink(s4,s8)
+ net.addLink(s4,s9)
+ net.addLink(s5,s9)
+ 
+ net.addLink(s8,s2)
+ net.addLink(s9,s2)
  
  net.addLink(h1,s1)
  net.addLink(h2,s2)
- net.addLink(h4,s4)
- net.addLink(h5,s5)
  
 
 
@@ -49,7 +70,9 @@ def tfTopo():
  for host in net.hosts:
      if "h" in host.name:
          host.cmd('ethtool -K %s-eth0 tso off' % host.name)
- #call("echo  %s "% 'ha',shell=True)
+ call("sudo bash ../Click/runFirewall.sh h3 firewall3.click ",shell=True)
+ call("sudo bash ../Click/runFirewall.sh h4 firewall3.click ",shell=True)
+ call("sudo bash ../Click/runFirewall.sh h5 firewall3.click ",shell=True)
  
  CLI(net)
  net.stop()

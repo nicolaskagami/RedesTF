@@ -25,6 +25,9 @@ import networkx as nx
 #import matplotlib.pyplot as plt
 import re
 import itertools
+from subprocess import call
+import threading
+import time
 
 ARP = arp.arp.__name__
 IPV4 = ipv4.ipv4.__name__
@@ -34,21 +37,21 @@ ip_to_mac = {
 	'10.0.0.3' : '00:00:00:00:00:03',
 	'10.0.0.4' : '00:00:00:00:00:04',
 	'10.0.0.5' : '00:00:00:00:00:05',
+	'10.0.0.6' : '00:00:00:00:00:06',
+	'10.0.0.7' : '00:00:00:00:00:07',
 	'10.0.0.99' : '00:00:00:00:00:99'
 	}
 #PoPs = [ '00:00:00:00:00:03',  '00:00:00:00:00:04', '00:00:00:00:00:05']
 PoPs = { 
-        '10.0.0.3': {'type': 'firewall','flows': [], 'status' : 'ok'},
-        '10.0.0.4': {'type': 'firewall','flows': [], 'status' : 'bad'},
-        '10.0.0.5': {'type': 'firewall','flows': [], 'status' : 'bad'}
+        '10.0.0.3': {'name': 'mn.h3', 'type': 'firewall','flows': [], 'status' : 'ok'},
+        '10.0.0.4': {'name': 'mn.h4', 'type': 'firewall','flows': [], 'status' : 'ok'},
+        '10.0.0.5': {'name': 'mn.h5', 'type': 'firewall','flows': [], 'status' : 'ok'}
        }
 SFCs = { 
-         '00:00:00:00:00:02':  ['00:00:00:00:00:03','00:00:00:00:00:02'],
-         '00:00:00:00:00:01':  ['00:00:00:00:00:03','00:00:00:00:00:01'],
-         '10.0.0.2':  ['firewall'],
-         '10.0.0.1':  ['firewall']
+         '10.0.0.2':  ['firewall']
        }
 SFC_flows = {} 
+ 
 class ProjectController(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
  
@@ -62,6 +65,9 @@ class ProjectController(app_manager.RyuApp):
         self.no_of_nodes = 0
         self.no_of_links = 0
         self.i=0
+        self.flow_id = 1
+        t = threading.Thread(name='PoPChecker',target=self.check_pops)
+        t.start()
   
     #Função para listar attributos no objeto
     def ls(self,obj):
@@ -101,23 +107,68 @@ class ProjectController(app_manager.RyuApp):
 
         actions = [datapath.ofproto_parser.OFPActionOutput(output)]
         datapath.send_packet_out(in_port=in_port, actions = actions, data=pkt.data)  
+
+    def check_pops(self):
+      while(True):
+        for pop in PoPs:
+            state = call('sudo bash ../checkPops.sh %s > /dev/null 2>&1' % PoPs[pop]['name'], shell=True)
+            if state == 0: 
+                PoPs[pop]['status'] = 'ok'
+            else: 
+                PoPs[pop]['status'] = 'bad'
+                if PoPs[pop]['flows']:
+                    print PoPs
+                    self.remove_flow(PoPs[pop]['flows'][0])
+                    PoPs[pop]['flows'].remove(PoPs[pop]['flows'][0])
+            print PoPs[pop]['name'], ": ", PoPs[pop]['status'] 
+        #time.sleep(2)
  
-    def add_flow(self, datapath, match, actions, priority):
+    def add_flow(self, datapath, match, actions, priority, identifier):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser      
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)] 
         mod = datapath.ofproto_parser.OFPFlowMod(
-            datapath=datapath, match=match, cookie=0,
+            datapath=datapath, match=match, cookie=identifier,
             command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0,
             priority=priority, instructions=inst)
         datapath.send_msg(mod)
 
-    def select_pop(self,pop_type):
+    def remove_flow(self, identifier):
+        for f in SFC_flows.keys():
+            if SFC_flows[f] == identifier:
+                del SFC_flows[f]
+        switch_list = get_switch(self.topology_api_app, None)  
+        for switch in switch_list:
+            self.remove_flow_rule(switch.dp,identifier)
+
+    def remove_flow_rule(self, datapath,identifier):
+        parser = datapath.ofproto_parser
+        ofp = datapath.ofproto
+        match = parser.OFPMatch(eth_type=0x0800)
+        mod = parser.OFPFlowMod(
+            datapath=datapath, 
+            cookie=identifier,
+            command=datapath.ofproto.OFPFC_DELETE,
+            out_port = datapath.ofproto.OFPP_ANY,
+            out_group= datapath.ofproto.OFPP_ANY,
+            match=match)
+        datapath.send_msg(mod)
+        mod = parser.OFPGroupMod(
+            datapath,
+            command=ofp.OFPGC_DELETE,
+            type_=0,
+            group_id=ofp.OFPG_ALL)
+        datapath.send_msg(mod)
+
+    def select_pop(self,pop_type, fid):
         for pop in PoPs.keys():
             if PoPs[pop]['type'] == pop_type:
-                best = pop
                 if PoPs[pop]['status'] == 'ok':
-                    return pop
+                    best = pop
+        PoPs[best]['flows'].append(fid);
+        print "Choosing: ", best
+        return best
+
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures , CONFIG_DISPATCHER)
     def switch_features_handler(self , ev):
         datapath = ev.msg.datapath
@@ -128,6 +179,7 @@ class ProjectController(app_manager.RyuApp):
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS , actions)]
         mod = datapath.ofproto_parser.OFPFlowMod(datapath=datapath, match=match, cookie=0,command=ofproto.OFPFC_ADD, idle_timeout=0, hard_timeout=0, priority=0, instructions=inst)
         datapath.send_msg(mod)
+
  
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
@@ -173,7 +225,7 @@ class ProjectController(app_manager.RyuApp):
                     print "Reflowing: DPID", dpid, ip.src, "->", ip.dst 
                     return
                 else:
-                    SFC_flows[(ip.dst,ip.src)] = []
+                    SFC_flows[(ip.dst,ip.src)] = self.flow_id
                 path_source = src
                 whole_path = SFCs[ip.dst]
                 whole_path.append(ip.dst)
@@ -181,9 +233,8 @@ class ProjectController(app_manager.RyuApp):
                     if pop == ip.dst:
                         path_target = ip_to_mac[pop]
                     else:
-                        path_target = ip_to_mac[self.select_pop(pop)]
+                        path_target = ip_to_mac[self.select_pop(pop,self.flow_id)]
                     path=nx.shortest_path(self.net,path_source,path_target)  
-                    SFC_flows[(ip.dst,ip.src)].append(path)
                     first = True
                     for i in path:
                         if isinstance(i,int):
@@ -204,7 +255,7 @@ class ProjectController(app_manager.RyuApp):
                             else:
                                 match = switchDP.ofproto_parser.OFPMatch(eth_type=0x800,in_port=in_port, ipv4_src=ip.src,ipv4_dst=ip.dst,ip_dscp=1)
                             actions.append(switchDP.ofproto_parser.OFPActionOutput(out_port))
-                            self.add_flow(switchDP, match, actions,2048)
+                            self.add_flow(switchDP, match, actions, 2049,self.flow_id)
                             #if next != dst: #Last of All
                             if next != path_target: #Last of segment
                                 paths=self.net[next][i] #may not work for multiple connections between 2 switches
@@ -213,14 +264,16 @@ class ProjectController(app_manager.RyuApp):
                             #else
                             #    #add_flow
                     path_source = path_target
-                #print SFC_flows  
+                #print SFC_flows[(ip.dst,ip.src)]
 
+
+                self.flow_id+=1
                 out = datapath.ofproto_parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,actions=first_packet_actions, data=msg.data)
                 datapath.send_msg(out)
+
                 return
             else:
                 #Local hop mac redirection (non-SFC traffic)
-                print "b:", dst 
                 path=nx.shortest_path(self.net,src,dst)  
                 next=path[path.index(dpid)+1]
                 paths=self.net[dpid][next]
@@ -228,12 +281,12 @@ class ProjectController(app_manager.RyuApp):
 
                 match = datapath.ofproto_parser.OFPMatch(eth_type=0x800,in_port=in_port, eth_dst=dst)
                 actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
-                self.add_flow(datapath, match, actions,2048)
+                self.add_flow(datapath, match, actions,2048,0)
 
-                print "  path: ", path
-                print "  outport: ", out_port
-                print "  next: ", next
-                print "  dpid: ", dpid
+                #print "  path: ", path
+                #print "  outport: ", out_port
+                #print "  next: ", next
+                #print "  dpid: ", dpid
                 #print self.net.edges(data=True, keys=True)
                 out = datapath.ofproto_parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,actions=actions, data=msg.data)
 

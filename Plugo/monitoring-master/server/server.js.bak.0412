@@ -4,8 +4,7 @@ var bodyParser = require("body-parser");
 var app = express()
 
 //app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json({limit: '50mb'}));
-app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
+app.use(bodyParser.json());
 app.use(express.static(__dirname + "/public"));
 
 
@@ -595,7 +594,7 @@ function insert_into_buffer_interval(req, video_id) {
 
 
 
-app.post('/api/monitor', bodyParser({limit:'30mb'}), function (req, res){
+app.post('/api/monitor', function (req, res){
   console.log("Monitoring info received");
   
   fs.writeFile('index-node.txt', (video_information_id_ + 1).toString(), function (err) {
@@ -619,7 +618,7 @@ app.post('/api/monitor', bodyParser({limit:'30mb'}), function (req, res){
   insert_into_frame_per_second(req, video_id);
   insert_into_buffer_interval(req, video_id);
   xw.endDocument();
-  alert(results.file_name); 
+  
   fs.writeFile(results.file_name + '.xml', xw.toString(), function (err) {
     if (err) throw err;
   });
@@ -633,7 +632,7 @@ app.post('/api/monitor', bodyParser({limit:'30mb'}), function (req, res){
 
   
 
-  exec('curl --form "report=@'+results.file_name+'.xml" http://200.220.254.22/mom/reports/send', puts);
+  exec('curl --form "report=@'+results.file_name+'.xml" http://200.220.254.84/mom/reports/send', puts);
 
   res.json(JSON.stringify(return_object));
 
@@ -692,14 +691,14 @@ function insert_into_questionario(req) {
 
 
 
-function randomstring(length, chars) {
+function randomString(length, chars) {
     var mask = '';
-    if (chars.indexof('a') > -1) mask += 'abcdefghijklmnopqrstuvwxyz';
-    if (chars.indexof('a') > -1) mask += 'abcdefghijklmnopqrstuvwxyz';
-    if (chars.indexof('#') > -1) mask += '0123456789';
-    if (chars.indexof('!') > -1) mask += '~`!@#$%^&*()_+-={}[]:";\'<>?,./|\\';
+    if (chars.indexOf('a') > -1) mask += 'abcdefghijklmnopqrstuvwxyz';
+    if (chars.indexOf('A') > -1) mask += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (chars.indexOf('#') > -1) mask += '0123456789';
+    if (chars.indexOf('!') > -1) mask += '~`!@#$%^&*()_+-={}[]:";\'<>?,./|\\';
     var result = '';
-    for (var i = length; i > 0; --i) result += mask[math.round(math.random() * (mask.length - 1))];
+    for (var i = length; i > 0; --i) result += mask[Math.round(Math.random() * (mask.length - 1))];
     return result;
 }
 

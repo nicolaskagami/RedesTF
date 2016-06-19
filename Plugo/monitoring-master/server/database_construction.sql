@@ -420,7 +420,7 @@ CREATE TABLE `video_source` (
 
 LOCK TABLES `video_source` WRITE;
 /*!40000 ALTER TABLE `video_source` DISABLE KEYS */;
-INSERT INTO `video_source` VALUES (1,'http://200.220.254.84/b.html',0),(2,'http://200.220.254.84/hobbit-720p.mp4',0),(3,'http://200.220.254.84/b.html',1),(4,'http://200.220.254.84/hobbit-720p.mp4',1);
+INSERT INTO `video_source` VALUES (1,'http://200.220.254.22/b.html',0),(2,'http://200.220.254.22/hobbit-720p.mp4',0),(3,'http://200.220.254.22/b.html',1),(4,'http://200.220.254.22/hobbit-720p.mp4',1);
 /*!40000 ALTER TABLE `video_source` ENABLE KEYS */;
 UNLOCK TABLES;
 

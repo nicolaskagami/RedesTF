@@ -36,15 +36,15 @@
 
   "background": {
         "scripts": [
-                      "script/jquery-2.1.1.min.js",
+  //                  "script/jquery-2.1.1.min.js",
                       "script/background.js"
                    ]
   },
 
   "web_accessible_resources" : [
     "remote.html",
+    "script/utils.js",
     "star-on.png",
-    "script/jquery-2.1.1.min.js",
     "star-off.png"
   ],
 

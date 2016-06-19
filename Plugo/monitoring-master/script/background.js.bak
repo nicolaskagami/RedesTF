@@ -22,8 +22,6 @@ chrome.storage.sync.get({
         config = items;
 });
 
-chrome.tabs.executeScript(null, { file: "script/jquery-2.1.1.min.js" });
-
 var counter = 0;
 chrome.browserAction.onClicked.addListener(function (tab) {
     counter++;
@@ -57,6 +55,11 @@ chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
 chrome.webNavigation.onErrorOccurred.addListener(function(urlarr){
         console.log("HERE 2");
         console.dir(urlarr);
+});
+
+chrome.webNavigation.onErrorOccurred.addListener(function(urlarr){
+	console.log("HERE");
+	console.dir(urlarr);
 });
 
 chrome.storage.onChanged.addListener(function(changes, namespace) {
@@ -116,30 +119,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
         });
        
-    }
-   
-    if (request.action == "send_to_local"){
-	data = request.data.output;
-	filename = request.data.myuuid;
-	// Define a boundary, I stole this from IE but you can use any string AFAIK
-var boundary = "---------------------------7da24f2e50046";
-var body = '--' + boundary + '\r\n'
-         // Parameter name is "file" and local filename is "temp.txt"
-         + 'Content-Disposition: form-data; name="file"; '
-         + 'filename="' + filename + '.xml"\r\n'
-         // Add the file's mime-type
-         + 'Content-type: plain/text\r\n\r\n'
-         // Add your data:
-         + data + '\r\n'
-         + '--'+ boundary + '--\r\n';
-	$.ajax({
-    contentType: "multipart/form-data; boundary="+boundary,
-    data: body,
-    type: "POST",
-    url: "http://127.0.0.1:8000",
-    success: function (data, status) {
-    }
-});
     }
 
     if (request.action == "questionario") {
