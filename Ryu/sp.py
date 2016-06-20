@@ -31,16 +31,6 @@ import time
 
 ARP = arp.arp.__name__
 IPV4 = ipv4.ipv4.__name__
-ip_to_mac = { 
-	'10.0.0.1' : '00:00:00:00:00:01',
-	'10.0.0.2' : '00:00:00:00:00:02',
-	'10.0.0.3' : '00:00:00:00:00:03',
-	'10.0.0.4' : '00:00:00:00:00:04',
-	'10.0.0.5' : '00:00:00:00:00:05',
-	'10.0.0.6' : '00:00:00:00:00:06',
-	'10.0.0.7' : '00:00:00:00:00:07',
-	'10.0.0.99' : '00:00:00:00:00:99'
-	}
 #PoPs = [ '00:00:00:00:00:03',  '00:00:00:00:00:04', '00:00:00:00:00:05']
 PoPs = { 
         '10.0.0.3': {'name': 'mn.h3', 'type': 'firewall','flows': [], 'status' : 'ok'},
@@ -48,7 +38,8 @@ PoPs = {
         '10.0.0.5': {'name': 'mn.h5', 'type': 'firewall','flows': [], 'status' : 'ok'}
        }
 SFCs = { 
-         '10.0.0.2':  ['firewall']
+         '10.0.0.2':  ['firewall'],
+         '10.0.0.1':  ['firewall']
        }
 SFC_flows = {} 
  
@@ -117,9 +108,12 @@ class ProjectController(app_manager.RyuApp):
             else: 
                 PoPs[pop]['status'] = 'bad'
                 if PoPs[pop]['flows']:
-                    print PoPs
-                    self.remove_flow(PoPs[pop]['flows'][0])
-                    PoPs[pop]['flows'].remove(PoPs[pop]['flows'][0])
+                    #print PoPs
+                    for fs in SFC_flows.keys():
+                        self.remove_flow(SFC_flows[fs])
+                    PoPs[pop]['flows'] = []
+                    #self.remove_flow(PoPs[pop]['flows'][0])
+                    #PoPs[pop]['flows'].remove(PoPs[pop]['flows'][0])
             print PoPs[pop]['name'], ": ", PoPs[pop]['status'] 
         #time.sleep(2)
  
@@ -134,6 +128,7 @@ class ProjectController(app_manager.RyuApp):
         datapath.send_msg(mod)
 
     def remove_flow(self, identifier):
+        print "Removing Flow: ", identifier
         for f in SFC_flows.keys():
             if SFC_flows[f] == identifier:
                 del SFC_flows[f]
@@ -222,13 +217,17 @@ class ProjectController(app_manager.RyuApp):
 
             if ip != None and ip.dst in SFCs.keys():
                 if (ip.dst,ip.src) in SFC_flows.keys():
-                    print "Reflowing: DPID", dpid, ip.src, "->", ip.dst 
+                    #print "Reflowing: DPID", dpid, ":", in_port, " ", ip.src, "->", ip.dst 
+                    #print PoPs
+                    #print SFC_flows 
                     return
+                    #self.remove_flow(SFC_flows[(ip.dst,ip.src)])
                 else:
                     SFC_flows[(ip.dst,ip.src)] = self.flow_id
                 path_source = src
                 whole_path = SFCs[ip.dst]
                 whole_path.append(ip.dst)
+
                 for pop in whole_path:
                     if pop == ip.dst:
                         path_target = ip_to_mac[pop]
@@ -246,20 +245,23 @@ class ProjectController(app_manager.RyuApp):
                             if first:
                                 first = False
                                 if path_source == src:
+                                    paths=self.net[i][src] #may not work for multiple connections between 2 switches
+                                    in_port=[paths[p]['port'] for p in paths if 'port' in paths[p]][0]
+                                    #print "Src switch:", switchDP
                                     first_packet_actions = [datapath.ofproto_parser.OFPActionSetField(ip_dscp=1), datapath.ofproto_parser.OFPActionOutput(out_port) ]
                                     actions.append(switchDP.ofproto_parser.OFPActionSetField(ip_dscp=1))
                                     match = switchDP.ofproto_parser.OFPMatch(eth_type=0x800,in_port=in_port, ipv4_src=ip.src,ipv4_dst=ip.dst)
                                 else:
-                                    match = switchDP.ofproto_parser.OFPMatch(eth_type=0x800,in_port=2, ipv4_src=ip.src,ipv4_dst=ip.dst,ip_dscp=1)
+                                    match = switchDP.ofproto_parser.OFPMatch(eth_type=0x800,in_port=2, ipv4_src=ip.src,ipv4_dst=ip.dst)#Later match for dscp
                                     #match correct in_port 
                             else:
-                                match = switchDP.ofproto_parser.OFPMatch(eth_type=0x800,in_port=in_port, ipv4_src=ip.src,ipv4_dst=ip.dst,ip_dscp=1)
+                                match = switchDP.ofproto_parser.OFPMatch(eth_type=0x800,in_port=in_port, ipv4_src=ip.src,ipv4_dst=ip.dst)#Later match for dscp
                             actions.append(switchDP.ofproto_parser.OFPActionOutput(out_port))
                             self.add_flow(switchDP, match, actions, 2049,self.flow_id)
-                            #if next != dst: #Last of All
                             if next != path_target: #Last of segment
                                 paths=self.net[next][i] #may not work for multiple connections between 2 switches
                                 in_port=[paths[p]['port'] for p in paths if 'port' in paths[p]][0]
+                            #if next != dst: #Last of All
                             #    #add_flow
                             #else
                             #    #add_flow
@@ -312,3 +314,15 @@ class ProjectController(app_manager.RyuApp):
             if (link.dst.dpid,link.src.dpid,link.dst.port_no) not in list(self.net.edges_iter(data='port')):
                 self.net.add_edge(link.dst.dpid,link.src.dpid,port=link.dst.port_no)
 
+ip_to_mac = { 
+	'10.0.0.1' : '00:00:00:00:00:01',
+	'10.0.0.2' : '00:00:00:00:00:02',
+	'10.0.0.3' : '00:00:00:00:00:03',
+	'10.0.0.4' : '00:00:00:00:00:04',
+	'10.0.0.5' : '00:00:00:00:00:05',
+	'10.0.0.6' : '00:00:00:00:00:06',
+	'10.0.0.7' : '00:00:00:00:00:07',
+	'10.0.0.8' : '00:00:00:00:00:08',
+	'10.0.0.9' : '00:00:00:00:00:09',
+	'10.0.0.99' : '00:00:00:00:00:99'
+	}
