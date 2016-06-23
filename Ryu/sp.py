@@ -33,13 +33,23 @@ ARP = arp.arp.__name__
 IPV4 = ipv4.ipv4.__name__
 #PoPs = [ '00:00:00:00:00:03',  '00:00:00:00:00:04', '00:00:00:00:00:05']
 PoPs = { 
-        '10.0.0.3': {'name': 'mn.h3', 'type': 'firewall','flows': [], 'status' : 'ok'},
-        '10.0.0.4': {'name': 'mn.h4', 'type': 'firewall','flows': [], 'status' : 'ok'},
-        '10.0.0.5': {'name': 'mn.h5', 'type': 'firewall','flows': [], 'status' : 'ok'}
+        '10.0.1.1': {'name': 'mn.p1', 'type': 'firewall','flows': [], 'status' : 'ok'},
+        '10.0.1.2': {'name': 'mn.p2', 'type': 'firewall','flows': [], 'status' : 'ok'},
+        '10.0.1.3': {'name': 'mn.p3', 'type': 'firewall','flows': [], 'status' : 'ok'},
+        '10.0.1.4': {'name': 'mn.p4', 'type': 'firewall','flows': [], 'status' : 'ok'},
+        '10.0.1.5': {'name': 'mn.p5', 'type': 'firewall','flows': [], 'status' : 'ok'}
        }
 SFCs = { 
+         '10.0.0.1':  ['firewall'],
          '10.0.0.2':  ['firewall'],
-         '10.0.0.1':  ['firewall']
+         '10.0.0.3':  ['firewall'],
+         '10.0.0.4':  ['firewall'],
+         '10.0.0.5':  ['firewall'],
+         '10.0.0.6':  ['firewall'],
+         '10.0.0.7':  ['firewall'],
+         '10.0.0.8':  ['firewall'],
+         '10.0.0.9':  ['firewall'],
+         '10.0.0.10':  ['firewall']
        }
 SFC_flows = {} 
  
@@ -233,7 +243,11 @@ class ProjectController(app_manager.RyuApp):
                         path_target = ip_to_mac[pop]
                     else:
                         path_target = ip_to_mac[self.select_pop(pop,self.flow_id)]
-                    path=nx.shortest_path(self.net,path_source,path_target)  
+                    try:
+                        path=nx.shortest_path(self.net,path_source,path_target)  
+                    except nx.NetworkXError:
+                        print "NX Error:"
+                        print nx.edges()
                     first = True
                     for i in path:
                         if isinstance(i,int):
@@ -324,5 +338,12 @@ ip_to_mac = {
 	'10.0.0.7' : '00:00:00:00:00:07',
 	'10.0.0.8' : '00:00:00:00:00:08',
 	'10.0.0.9' : '00:00:00:00:00:09',
+	'10.0.0.10' : '00:00:00:00:00:10',
+
+	'10.0.1.1' : '00:00:00:00:01:01',
+	'10.0.1.2' : '00:00:00:00:01:02',
+	'10.0.1.3' : '00:00:00:00:01:03',
+	'10.0.1.4' : '00:00:00:00:01:04',
+	'10.0.1.5' : '00:00:00:00:01:05',
 	'10.0.0.99' : '00:00:00:00:00:99'
 	}
