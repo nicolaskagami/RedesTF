@@ -31,7 +31,6 @@ import time
 
 ARP = arp.arp.__name__
 IPV4 = ipv4.ipv4.__name__
-#PoPs = [ '00:00:00:00:00:03',  '00:00:00:00:00:04', '00:00:00:00:00:05']
 PoPs = { 
         '10.0.1.1': {'name': 'mn.p1', 'type': 'firewall','flows': [], 'status' : 'ok'},
         '10.0.1.2': {'name': 'mn.p2', 'type': 'firewall','flows': [], 'status' : 'ok'},
@@ -119,11 +118,11 @@ class ProjectController(app_manager.RyuApp):
                 PoPs[pop]['status'] = 'bad'
                 if PoPs[pop]['flows']:
                     #print PoPs
-                    for fs in SFC_flows.keys():
-                        self.remove_flow(SFC_flows[fs])
-                    PoPs[pop]['flows'] = []
-                    #self.remove_flow(PoPs[pop]['flows'][0])
-                    #PoPs[pop]['flows'].remove(PoPs[pop]['flows'][0])
+                    #for fs in SFC_flows.keys():
+                    #    self.remove_flow(SFC_flows[fs])
+                    #PoPs[pop]['flows'] = []
+                    self.remove_flow(PoPs[pop]['flows'][0])
+                    PoPs[pop]['flows'].remove(PoPs[pop]['flows'][0])
             print PoPs[pop]['name'], ": ", PoPs[pop]['status'] 
         #time.sleep(2)
  
@@ -149,27 +148,28 @@ class ProjectController(app_manager.RyuApp):
     def remove_flow_rule(self, datapath,identifier):
         parser = datapath.ofproto_parser
         ofp = datapath.ofproto
-        match = parser.OFPMatch(eth_type=0x0800)
+        #match = parser.OFPMatch(eth_type=0x0800)
+        wildcards = ofp.OFPFW_ALL
+        match = datapath.ofproto_parser.OFPMatch(wildcards, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
         mod = parser.OFPFlowMod(
-            datapath=datapath, 
             cookie=identifier,
             command=datapath.ofproto.OFPFC_DELETE,
-            out_port = datapath.ofproto.OFPP_ANY,
-            out_group= datapath.ofproto.OFPP_ANY,
             match=match)
         datapath.send_msg(mod)
-        mod = parser.OFPGroupMod(
-            datapath,
-            command=ofp.OFPGC_DELETE,
-            type_=0,
-            group_id=ofp.OFPG_ALL)
-        datapath.send_msg(mod)
+        #mod = parser.OFPGroupMod(
+        #    datapath,
+        #    command=ofp.OFPGC_DELETE,
+        #    type_=0,
+        #    group_id=ofp.OFPG_ANY)
+        #datapath.send_msg(mod)
 
     def select_pop(self,pop_type, fid):
+        best=-1
         for pop in PoPs.keys():
-            if PoPs[pop]['type'] == pop_type:
-                if PoPs[pop]['status'] == 'ok':
+            if PoPs[pop]['type'] == pop_type and PoPs[pop]['status'] == 'ok':
+                if best == -1 or len(PoPs[pop]['flows']) < min_flows:
                     best = pop
+                    min_flows = len(PoPs[pop]['flows'])
         PoPs[best]['flows'].append(fid);
         print "Choosing: ", best
         return best

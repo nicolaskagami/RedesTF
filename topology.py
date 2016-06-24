@@ -2,6 +2,7 @@
 # coding=utf-8
 
 import time
+import random
 from mininet.topo import Topo
 from mininet.net import Containernet
 from mininet.node import RemoteController, Host, OVSKernelSwitch, OVSSwitch, Docker
@@ -12,7 +13,7 @@ from mininet.log import setLogLevel, info
 from subprocess import call
 
 pop_cpu_percentage=15
-pop_link_bw=3
+pop_link_bw=10
 def tfTopo():
     net = Containernet( topo=None, controller=RemoteController, switch=OVSKernelSwitch )
 
@@ -107,26 +108,30 @@ def tfTopo():
         if "p" in host.name:
             call("sudo bash Click/runFirewall.sh %s Click/firewall3.click " % host.name,shell=True)
 
-    time.sleep(10)
+    #time.sleep(10)
             
+    random.seed()
+    for i in range(0,5):
+        pair = random.sample([0,1,2,3,4,5,6,7,8,9],2)
+        print net.hosts[pair[0]].name, "->", net.hosts[pair[1]].name
     #h1.cmd('bash client.sh "h1" &')
     #h3.cmd('bash client.sh "h3" &')
-    for host in net.hosts:
-        if "h" in host.name and host.name != "h2":
-            print host.name
-            host.cmd('bash client.sh %s &' % host.name)
+    #for host in net.hosts:
+    #    if "h" in host.name and host.name != "h2":
+    #        print host.name
+    #        host.cmd('bash client.sh %s &' % host.name)
     #call("sudo bash Click/runFirewall.sh h4 Click/firewall3.click ",shell=True)
     #call("sudo bash Click/runFirewall.sh h5 Click/firewall3.click ",shell=True)
 
-    time.sleep(150)
-    #h1.cmd('echo ha')
-    #h3.cmd('echo ha')
+    #time.sleep(10)
+    #h1.cmd('ping -c10 p5 &')
+    #time.sleep(140)
     #time.sleep(150)
-    for host in net.hosts:
-        if "h" in host.name:
-            host.cmd('echo ha')
+    #for host in net.hosts:
+    #    if "h" in host.name:
+    #        host.cmd('echo ha')
 
-    #CLI(net)
+    CLI(net)
     net.stop()
 
 if __name__ == '__main__':

@@ -1,1 +1,3 @@
-2016/06/23-22:34:31.282 30121 Reusing MANIFEST /home/ubuntu/redestf/Plugo/h6/Default/data_reduction_proxy_leveldb/MANIFEST-000001
+2016/06/24-12:04:16.012 8586 Reusing MANIFEST /home/ubuntu/redestf/Plugo/h6/Default/data_reduction_proxy_leveldb/MANIFEST-000001
+2016/06/24-12:04:16.012 8586 Recovering log #3
+2016/06/24-12:04:16.012 8586 Reusing old log /home/ubuntu/redestf/Plugo/h6/Default/data_reduction_proxy_leveldb/000003.log 
