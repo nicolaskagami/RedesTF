@@ -146,15 +146,20 @@ class ProjectController(app_manager.RyuApp):
             self.remove_flow_rule(switch.dp,identifier)
 
     def remove_flow_rule(self, datapath,identifier):
+        print "Removing ", identifier, " from switch: ", datapath.id
         parser = datapath.ofproto_parser
         ofp = datapath.ofproto
         #match = parser.OFPMatch(eth_type=0x0800)
-        wildcards = ofp.OFPFW_ALL
-        match = datapath.ofproto_parser.OFPMatch(wildcards, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-        mod = parser.OFPFlowMod(
+        #match = parser.OFPMatch()
+        #wildcards = ofp.OFPFW_ALL
+        #match = datapath.ofproto_parser.OFPMatch(wildcards, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        mod = parser.OFPFlowMod(datapath=datapath,
             cookie=identifier,
-            command=datapath.ofproto.OFPFC_DELETE,
-            match=match)
+            cookie_mask=0xFF,
+            out_port=ofp.OFPP_ANY,
+            out_group=ofp.OFPG_ANY,
+            command=datapath.ofproto.OFPFC_DELETE
+            )
         datapath.send_msg(mod)
         #mod = parser.OFPGroupMod(
         #    datapath,
@@ -299,6 +304,14 @@ class ProjectController(app_manager.RyuApp):
                 actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
                 self.add_flow(datapath, match, actions,2048,0)
 
+                #Clausula de ataque:
+                if next == dst and in_port == 2 and "01:0" in dst:
+                    print "Ataque: ", dst
+                    actions.append(datapath.ofproto_parser.OFPActionOutput(out_port))
+                #Fim da clausula de ataque
+
+
+                #print "b", src, "->", dst
                 #print "  path: ", path
                 #print "  outport: ", out_port
                 #print "  next: ", next

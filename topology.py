@@ -12,8 +12,20 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel, info
 from subprocess import call
 
-pop_cpu_percentage=15
-pop_link_bw=10
+#Parameters
+pop_cpu_percentage=10
+pop_link_bw=100
+pop_link_loss=0
+pop_link_delay="0ms"
+
+inter_switch_bw=100
+inter_switch_loss=0
+inter_switch_delay="1ms"
+
+host_switch_bw=100
+host_switch_loss=0
+host_switch_delay="1ms"
+
 def tfTopo():
     net = Containernet( topo=None, controller=RemoteController, switch=OVSKernelSwitch )
 
@@ -32,10 +44,10 @@ def tfTopo():
     h10 = net.addHost('h10', ip='10.0.0.10', mac='00:00:00:00:00:10')
 
     p1 = net.addHost('p1', ip='10.0.1.1', mac='00:00:00:00:01:01', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10, cpu_quota=pop_cpu_percentage*100,cpu_period=10000)
-    p2 = net.addHost('p2', ip='10.0.1.2', mac='00:00:00:00:01:02', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10, cpu_quota=pop_cpu_percentage*100,cpu_period=5000)
-    p3 = net.addHost('p3', ip='10.0.1.3', mac='00:00:00:00:01:03', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10, cpu_quota=pop_cpu_percentage*100,cpu_period=5000)
-    p4 = net.addHost('p4', ip='10.0.1.4', mac='00:00:00:00:01:04', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10, cpu_quota=pop_cpu_percentage*100,cpu_period=5000)
-    p5 = net.addHost('p5', ip='10.0.1.5', mac='00:00:00:00:01:05', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10, cpu_quota=pop_cpu_percentage*100,cpu_period=5000)
+    p2 = net.addHost('p2', ip='10.0.1.2', mac='00:00:00:00:01:02', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10, cpu_quota=pop_cpu_percentage*100,cpu_period=10000)
+    p3 = net.addHost('p3', ip='10.0.1.3', mac='00:00:00:00:01:03', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10, cpu_quota=pop_cpu_percentage*100,cpu_period=10000)
+    p4 = net.addHost('p4', ip='10.0.1.4', mac='00:00:00:00:01:04', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10, cpu_quota=pop_cpu_percentage*100,cpu_period=10000)
+    p5 = net.addHost('p5', ip='10.0.1.5', mac='00:00:00:00:01:05', cls=Docker, dimage='gmiotto/click',mem_limit=1024*1024*10, cpu_quota=pop_cpu_percentage*100,cpu_period=10000)
 
     #Switches
     s1 = net.addSwitch('s1')
@@ -50,19 +62,19 @@ def tfTopo():
     s10 = net.addSwitch('s10')
 
     #PoP Hosts
-    net.addLink(p1,s1, cls=TCLink, delay="100ms",bw=pop_link_bw,loss=0)
+    net.addLink(p1,s1, cls=TCLink, delay=pop_link_delay,bw=pop_link_bw,loss=pop_link_loss)
     net.addLink(p1,s1)
 
-    net.addLink(p2,s2, cls=TCLink, delay="100ms",bw=pop_link_bw,loss=0)
+    net.addLink(p2,s2, cls=TCLink, delay=pop_link_delay,bw=pop_link_bw,loss=pop_link_loss)
     net.addLink(p2,s2)
 
-    net.addLink(p3,s3, cls=TCLink, delay="100ms",bw=pop_link_bw,loss=0)
+    net.addLink(p3,s3, cls=TCLink, delay=pop_link_delay,bw=pop_link_bw,loss=pop_link_loss)
     net.addLink(p3,s3)
 
-    net.addLink(p4,s4, cls=TCLink, delay="100ms",bw=pop_link_bw,loss=0)
+    net.addLink(p4,s4, cls=TCLink, delay=pop_link_delay,bw=pop_link_bw,loss=pop_link_loss)
     net.addLink(p4,s4)
 
-    net.addLink(p5,s5, cls=TCLink, delay="100ms",bw=pop_link_bw,loss=0)
+    net.addLink(p5,s5, cls=TCLink, delay=pop_link_delay,bw=pop_link_bw,loss=pop_link_loss)
     net.addLink(p5,s5)
 
     #Normal Hosts
@@ -77,23 +89,23 @@ def tfTopo():
     net.addLink(h9,s9)
     net.addLink(h10,s10)
 
-    net.addLink(s7, s1) #s7-s1
-    net.addLink(s7, s2) 
-    net.addLink(s1, s2) 
-    net.addLink(s1, s8) 
-    net.addLink(s1, s3) 
-    net.addLink(s1, s6) 
-    net.addLink(s8, s3) 
-    net.addLink(s2, s5) 
-    net.addLink(s2, s4) 
-    net.addLink(s3, s5) 
-    net.addLink(s3, s4) 
-    net.addLink(s4, s9) 
-    net.addLink(s4, s6) 
-    net.addLink(s5, s6) 
-    net.addLink(s5, s10) 
-    net.addLink(s9, s6) 
-    net.addLink(s10, s6) 
+    net.addLink(s7, s1, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) #s7-s1
+    net.addLink(s7, s2, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s1, s2, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s1, s8, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s1, s3, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s1, s6, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s8, s3, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s2, s5, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s2, s4, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s3, s5, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s3, s4, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s4, s9, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s4, s6, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s5, s6, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s5, s10, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s9, s6, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
+    net.addLink(s10, s6, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
 
     #net.addLink(s6, s3, cls=TCLink, delay="100ms", bw=0.5, loss=0)
 
