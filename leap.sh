@@ -44,11 +44,17 @@ parsePlugo (){
     total_stall_number=$(xmllint --xpath '/test/total_number_of_stall/text()' $file)
     total_playtime=$(xmllint --xpath '/test/total_played_time/text()' $file)
     coef=$(bc <<< "scale=6;$total_playtime/60")
-    stall_count=$(bc <<< "$total_stall_number*$coef")
-    stall_length=$(bc <<< "$total_stall_length*$coef")
+    if [ "$(bc -l <<< "$coef < 0.01")" -eq 1 ]
+    then
+        echo "1"
+    else
+        stall_count=$(bc <<< "$total_stall_number/$coef")
+        stall_length=$(bc <<< "$total_stall_length/$coef")
 
-    QoECalc 0 $stall_count $stall_length
-    echo "calling: 0 $stall_count $stall_length"
-    echo $qoe
+        QoECalc 0 $stall_count $stall_length
+        echo $qoe
+
+    fi
+    #echo "calling: 0 $stall_count $stall_length"
 }
 parsePlugo $1

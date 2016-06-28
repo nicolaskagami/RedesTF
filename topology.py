@@ -1,8 +1,6 @@
 #!/usr/bin/python
 # coding=utf-8
 
-import time
-import random
 from mininet.topo import Topo
 from mininet.net import Containernet
 from mininet.node import RemoteController, Host, OVSKernelSwitch, OVSSwitch, Docker
@@ -11,6 +9,11 @@ from mininet.link import TCLink, Link
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info
 from subprocess import call
+
+import sys
+import getopt
+import time
+import random
 
 #Parameters
 pop_cpu_percentage=10
@@ -22,7 +25,7 @@ inter_switch_bw=100
 inter_switch_loss=0
 inter_switch_delay="1ms"
 
-host_switch_bw=100
+host_switch_bw=1
 host_switch_loss=0
 host_switch_delay="1ms"
 
@@ -30,6 +33,16 @@ def tfTopo():
     net = Containernet( topo=None, controller=RemoteController, switch=OVSKernelSwitch )
 
     net.addController( 'c0', RemoteController, ip="127.0.0.1", port=6633 )
+
+    #Arguments
+    opts, args = getopt.getopt(sys.argv[1:], "", ["flows=", "dos="])
+    for o, a in opts:
+        if o == "--flows":
+            number_of_flows=int(a)
+            print "Flows: ",a
+        elif o in ("--dos"):
+            number_of_dos=int(a)
+            print "DoS: ",a
 
 # Hosts 
     h1 = net.addHost('h1', ip='10.0.0.1', mac='00:00:00:00:00:01')
@@ -78,16 +91,16 @@ def tfTopo():
     net.addLink(p5,s5)
 
     #Normal Hosts
-    net.addLink(h1,s1)
-    net.addLink(h2,s2)
-    net.addLink(h3,s3)
-    net.addLink(h4,s4)
-    net.addLink(h5,s5)
-    net.addLink(h6,s6)
-    net.addLink(h7,s7)
-    net.addLink(h8,s8)
-    net.addLink(h9,s9)
-    net.addLink(h10,s10)
+    net.addLink(h1,s1, cls=TCLink, delay=host_switch_delay,bw=host_switch_bw,loss=host_switch_loss)
+    net.addLink(h2,s2, cls=TCLink, delay=host_switch_delay,bw=host_switch_bw,loss=host_switch_loss)
+    net.addLink(h3,s3, cls=TCLink, delay=host_switch_delay,bw=host_switch_bw,loss=host_switch_loss)
+    net.addLink(h4,s4, cls=TCLink, delay=host_switch_delay,bw=host_switch_bw,loss=host_switch_loss)
+    net.addLink(h5,s5, cls=TCLink, delay=host_switch_delay,bw=host_switch_bw,loss=host_switch_loss)
+    net.addLink(h6,s6, cls=TCLink, delay=host_switch_delay,bw=host_switch_bw,loss=host_switch_loss)
+    net.addLink(h7,s7, cls=TCLink, delay=host_switch_delay,bw=host_switch_bw,loss=host_switch_loss)
+    net.addLink(h8,s8, cls=TCLink, delay=host_switch_delay,bw=host_switch_bw,loss=host_switch_loss)
+    net.addLink(h9,s9, cls=TCLink, delay=host_switch_delay,bw=host_switch_bw,loss=host_switch_loss)
+    net.addLink(h10,s10, cls=TCLink, delay=host_switch_delay,bw=host_switch_bw,loss=host_switch_loss)
 
     net.addLink(s7, s1, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) #s7-s1
     net.addLink(s7, s2, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
@@ -107,8 +120,6 @@ def tfTopo():
     net.addLink(s9, s6, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
     net.addLink(s10, s6, cls=TCLink, delay=inter_switch_delay,bw=inter_switch_bw,loss=inter_switch_loss) 
 
-    #net.addLink(s6, s3, cls=TCLink, delay="100ms", bw=0.5, loss=0)
-
     net.start()
 
     for host in net.hosts:
@@ -120,30 +131,39 @@ def tfTopo():
         if "p" in host.name:
             call("sudo bash Click/runFirewall.sh %s Click/firewall3.click " % host.name,shell=True)
 
-    #time.sleep(10)
-            
+    time.sleep(5)
+
+    #Flows 
     random.seed()
-    for i in range(0,5):
-        pair = random.sample([0,1,2,3,4,5,6,7,8,9],2)
-        print net.hosts[pair[0]].name, "->", net.hosts[pair[1]].name
-    #h1.cmd('bash client.sh "h1" &')
-    #h3.cmd('bash client.sh "h3" &')
-    #for host in net.hosts:
-    #    if "h" in host.name and host.name != "h2":
-    #        print host.name
-    #        host.cmd('bash client.sh %s &' % host.name)
-    #call("sudo bash Click/runFirewall.sh h4 Click/firewall3.click ",shell=True)
-    #call("sudo bash Click/runFirewall.sh h5 Click/firewall3.click ",shell=True)
+    hs = [0,1,2,3,4,5,6,7,8,9]
+    random.shuffle(hs)
+    if number_of_flows > 5:
+        number_of_flows = 5
+    for i in range(0,number_of_flows):
+        h_src = hs[2*i]
+        h_tgt = hs[2*i+1]
+        #pair = random.sample([0,1,2,3,4,5,6,7,8,9],2)
+    #    print net.hosts[pair[0]].name, "->", net.hosts[pair[1]].name
+        net.hosts[h_src].cmd('bash client.sh "%s" 10.0.0.%s &' % (net.hosts[h_src].name, h_tgt+1))
+        net.hosts[h_src].cmd('echo ha')
+        print 'bash client.sh "%s" %s &' % (net.hosts[h_src].name, net.hosts[h_tgt].name)
+        
+    time.sleep(2)
 
-    #time.sleep(10)
+    targets = [1,2,3,4,5]
+    random.shuffle(targets)
+    for i in range(0,number_of_dos):
+        h1.cmd('ping -c1 10.0.1.%s &' % targets[i])
+        print "Attacking p%s" % targets[i]
+
     #h1.cmd('ping -c10 p5 &')
-    #time.sleep(140)
+    time.sleep(60)
     #time.sleep(150)
-    #for host in net.hosts:
-    #    if "h" in host.name:
-    #        host.cmd('echo ha')
+    for host in net.hosts:
+        if "h" in host.name:
+            host.cmd('echo ha')
 
-    CLI(net)
+    #CLI(net)
     net.stop()
 
 if __name__ == '__main__':

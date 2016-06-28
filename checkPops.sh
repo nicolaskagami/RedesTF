@@ -1,7 +1,15 @@
-proc=$(docker stats --no-stream $1  | tail -n 1 | awk '{print $2}' | cut -d '.' -f1)
-if [ $proc -le "5" ];
+procFile=.procFile
+procDir=.procDir
+docker stats --no-stream $(docker ps --format '{{.Names}}') | tail -n +2 > $procFile 
+if ! [[ -d "$procDir" ]];
 then
-   exit 0
-else
-   exit 1
+    mkdir $procDir
 fi
+rm -f $procDir/*
+while read line
+do
+    name=$(echo $line | awk '{print $1}')
+    proc=$(echo $line | awk '{print $2}' | cut -d '.' -f1)
+    echo $proc > "$procDir/$name"
+done < $procFile
+rm -f $procFile

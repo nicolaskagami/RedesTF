@@ -110,8 +110,9 @@ class ProjectController(app_manager.RyuApp):
 
     def check_pops(self):
       while(True):
+        state = call('sudo bash ../checkPops.sh', shell=True)
         for pop in PoPs:
-            state = call('sudo bash ../checkPops.sh %s > /dev/null 2>&1' % PoPs[pop]['name'], shell=True)
+            state = call('[ "$(cat .procDir/%s 2>/dev/null)" -lt "10" ] 2>/dev/null' % PoPs[pop]['name'], shell=True)
             if state == 0: 
                 PoPs[pop]['status'] = 'ok'
             else: 
@@ -121,9 +122,10 @@ class ProjectController(app_manager.RyuApp):
                     #for fs in SFC_flows.keys():
                     #    self.remove_flow(SFC_flows[fs])
                     #PoPs[pop]['flows'] = []
-                    self.remove_flow(PoPs[pop]['flows'][0])
-                    PoPs[pop]['flows'].remove(PoPs[pop]['flows'][0])
-            print PoPs[pop]['name'], ": ", PoPs[pop]['status'] 
+                    for flows in PoPs[pop]['flows']:
+                        self.remove_flow(flows)
+                        PoPs[pop]['flows'].remove(flows)
+            print PoPs[pop]['name'], ": ", PoPs[pop]['status'], PoPs[pop]['flows']
         #time.sleep(2)
  
     def add_flow(self, datapath, match, actions, priority, identifier):
@@ -146,13 +148,9 @@ class ProjectController(app_manager.RyuApp):
             self.remove_flow_rule(switch.dp,identifier)
 
     def remove_flow_rule(self, datapath,identifier):
-        print "Removing ", identifier, " from switch: ", datapath.id
+        #print "Removing ", identifier, " from switch: ", datapath.id
         parser = datapath.ofproto_parser
         ofp = datapath.ofproto
-        #match = parser.OFPMatch(eth_type=0x0800)
-        #match = parser.OFPMatch()
-        #wildcards = ofp.OFPFW_ALL
-        #match = datapath.ofproto_parser.OFPMatch(wildcards, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
         mod = parser.OFPFlowMod(datapath=datapath,
             cookie=identifier,
             cookie_mask=0xFF,
@@ -161,20 +159,37 @@ class ProjectController(app_manager.RyuApp):
             command=datapath.ofproto.OFPFC_DELETE
             )
         datapath.send_msg(mod)
-        #mod = parser.OFPGroupMod(
-        #    datapath,
-        #    command=ofp.OFPGC_DELETE,
-        #    type_=0,
-        #    group_id=ofp.OFPG_ANY)
-        #datapath.send_msg(mod)
 
-    def select_pop(self,pop_type, fid):
+    def select_pop(self,pop_type, fid,source):
         best=-1
         for pop in PoPs.keys():
             if PoPs[pop]['type'] == pop_type and PoPs[pop]['status'] == 'ok':
                 if best == -1 or len(PoPs[pop]['flows']) < min_flows:
                     best = pop
                     min_flows = len(PoPs[pop]['flows'])
+                    path=nx.shortest_path(self.net,source,ip_to_mac[pop])  
+                    min_distance = len(path)
+                elif len(PoPs[pop]['flows']) == min_flows:
+                    path=nx.shortest_path(self.net,source,ip_to_mac[pop])  
+                    if min_distance > len(path):
+                        best = pop
+                        min_flows = len(PoPs[pop]['flows'])
+                        min_distance = len(path)
+
+        PoPs[best]['flows'].append(fid);
+        print "Choosing: ", best
+        return best
+
+    def select_closest_pop(self,pop_type, fid,source):
+        best=-1
+        for pop in PoPs.keys():
+            if PoPs[pop]['type'] == pop_type:
+                path=nx.shortest_path(self.net,source,ip_to_mac[pop])  
+                if best == -1 or min_distance > len(path):
+                    best = pop
+                    min_flows = len(PoPs[pop]['flows'])
+                    min_distance = len(path)
+
         PoPs[best]['flows'].append(fid);
         print "Choosing: ", best
         return best
@@ -247,7 +262,7 @@ class ProjectController(app_manager.RyuApp):
                     if pop == ip.dst:
                         path_target = ip_to_mac[pop]
                     else:
-                        path_target = ip_to_mac[self.select_pop(pop,self.flow_id)]
+                        path_target = ip_to_mac[self.select_pop(pop,self.flow_id,src)]
                     try:
                         path=nx.shortest_path(self.net,path_source,path_target)  
                     except nx.NetworkXError:
@@ -289,6 +304,9 @@ class ProjectController(app_manager.RyuApp):
 
 
                 self.flow_id+=1
+                if self.flow_id >= 254:
+                    self.flow_id=1
+    
                 out = datapath.ofproto_parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port,actions=first_packet_actions, data=msg.data)
                 datapath.send_msg(out)
 
